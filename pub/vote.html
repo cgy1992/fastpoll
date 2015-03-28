@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="inital-scale=1.0, width=device-width">
+    
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/mobi.css" media="all and (max-width: 799px)">
+  
+    <title>FasterPoll</title>
+  </head>
+  <body>
+    
+    <header id="head">
+      <div class="page">
+        <h1>FasterPoll</h1>
+        <nav id="tnav">
+          <a href="index.html">Home</a>
+          <a href="vote.html">Vote</a>
+          <a href="result.html">Result</a>
+        </nav>
+      </div>
+    </header>
+    
+    <main role="main" id="main">
+      <div class="page">
+        <h2>Cast your vote</h2>
+        <form class="form cbox" action="/vote?id=123" method="post">
+          <div class="view">
+            <p class="pqst">Hello world!</p>
+            <div class="fbox vbox">
+              <label>
+                <input type="checkbox">
+                I like turtles
+              </label>
+              <label>
+                <input type="checkbox">
+                I like trains
+              </label>
+            </div>
+          </div>
+          <div class="ftrl">
+            <a href="#" class="btn">Show result</a>
+            <input type="submit" class="btn btn--main" value="Submit">
+          </div>
+        </form>
+        <p class="pown"><a href="#">Create your own poll!</a></p>
+      </div>
+    </main>
+    
+    <footer id="foot">
+      <p class="page copy">&copy; 2015 FasterPoll</p>
+      <p class="page"><a href="#">View source on Github</a></p> 
+    </footer>
+    
+    <script src="js/main.js" defer></script>
+  </body>
+</html>
