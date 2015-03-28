@@ -1,6 +1,4 @@
 import sys
-import io
-import os
 import re
 import argparse
 
@@ -44,15 +42,16 @@ if __name__ == '__main__':
               if(nl_cnt == 2):
                 in_def = False
             else:
-              if(ch not in [' ', '\t', '\n']):
+              if(ch not in ['\t', '\n']):
                 consts[-1]['definition'] += ch
 
-      # write template makros
-      with open(args.output[0], "w", encoding="utf-8") as tof:
-        for const in consts:
-          const['definition'] = re.sub('"', '\\"', const['definition'])
+  # write template makros
+  with open(args.output[0], "w", encoding="utf-8") as tof:
+    print (consts)
+    for const in consts:
+      const['definition'] = re.sub('"', '\\"', const['definition'])
 
-          if(len(const['name']) > 0 and len(const['definition']) > 0):
-            tof.write("#define " + const['name'].upper() + " \"" + const['definition'] + "\"" + '\n' * 2);
+      if(len(const['name']) > 0 and len(const['definition']) > 0):
+        tof.write("#define " + const['name'].upper() + " \"" + const['definition'] + "\"" + '\n' * 2);
 
   sys.exit(0)
