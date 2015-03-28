@@ -1,9 +1,8 @@
 #pragma once
 
 /*!
- * FastCGI Poll "FastPoll"
- * Copyright (C) 2015 "asc"
- * License: MIT (see LICENSE.md)
+ * FastPoll - FastCGI Poll
+ * @copyright 2015 The FastPoll authors
  */
 
 #include <stdint.h>
@@ -11,10 +10,6 @@
 
 #define UNUSED __attribute__((unused))
  ; /* sublime bug */
-
-#define DB_NAME "fastpoll"
-#define DB_USER "fastpoll"
-#define DB_PASS "JG)(Updfddkl3=§("
 
 #include "fsp_db.h"
 

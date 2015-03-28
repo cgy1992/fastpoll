@@ -1,7 +1,6 @@
 /*!
- * FastCGI Poll "FastPoll"
- * Copyright (C) 2015 "asc"
- * License: MIT (see LICENSE.md)
+ * FastPoll - FastCGI Poll
+ * @copyright 2015 The FastPoll authors
  */
 
 #include <fcgi_stdio.h>

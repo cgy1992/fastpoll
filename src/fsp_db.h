@@ -1,17 +1,28 @@
 #pragma once
 
 /*!
- * FastCGI Poll "FastPoll"
- * Copyright (C) 2015 "asc"
- * License: MIT (see LICENSE.md)
+ * FastPoll - FastCGI Poll
+ * @copyright 2015 The FastPoll authors
  */
 
+#include <stdbool.h>
+
+#include "fsp.h"
+
+/* database context */
 struct fsp_db {
-  /* todo */  
+  bool is_open;
 };
 
-bool fsp_db_open(struct fsp_db*, const char*,
-                                 const char*,
-                                 const char*);
+/**
+ * open databse
+ * @param  db     context
+ * @return        status
+ */
+bool fsp_db_open(struct fsp_db*);
 
+/**
+ * close and cleanup database
+ * @param db   context
+ */
 void fsp_db_close(struct fsp_db*);
