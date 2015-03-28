@@ -98,7 +98,7 @@ void fsp_resp(struct fsp *app UNUSED, uint32_t sc, const char *ct)
 {
   printf("Status: %u\r\n", sc);
   printf("Content-Type: %s\r\n", ct);
-  printf("\r\n\r\n");
+  printf("\r\n");
 }
 
 /**
