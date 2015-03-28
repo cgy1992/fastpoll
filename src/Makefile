@@ -1,7 +1,7 @@
 CC=gcc
 CCFLAGS=-Wall -Werror -Wextra -std=c11
 LDFLAGS=-lm -lpthread -lfcgi
-APP=fsp
+APP=fastpoll
 
 all: main.o
 	$(CC) -o ../bin/$(APP) main.o $(LDFLAGS)

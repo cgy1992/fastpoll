@@ -1,17 +1,17 @@
 /*!
- * FastCGI Poll "FasterPoll"
+ * FastCGI Poll "FastPoll"
  * Copyright (C) 2015 "asc"
- * License: MIT (see LICENCE.md)
+ * License: MIT (see LICENSE.md)
  */
 
 #include <fcgi_stdio.h>
 #include <stdint.h>
 
 #define UNUSED __attribute__((unused))
-
+ ; /* sublime bug */
 
 /**
- * fasterpoll context
+ * fastpoll context
  */
 struct fsp {
   uint32_t len; /* content length */
@@ -66,7 +66,7 @@ void fsp_puts(struct fsp *app UNUSED, const char *tx)
 }
 
 /**
- * main-loop
+ * main
  * @param  argc
  * @param  argv
  * @return      exit-code
