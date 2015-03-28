@@ -36,7 +36,7 @@ clean:
 # debugging
  
 start:
-	 $(SPWNCGI) -p 9000 -a 127.0.0.1 -f bin/$(APP) -P $(PID)
+	$(SPWNCGI) -p 9000 -a 127.0.0.1 -f bin/$(APP) -P $(PID)
  
 stop:
 	$(KILL) -9 $$(cat $(PID))
