@@ -2,7 +2,7 @@ CC=`which gcc`
 TPL_GEN=`which python3` bin/gen_tpl.py
 RM=`which rm`
 SPWNCGI=`which spawn-fcgi`
-KILL=`which kill
+KILL=`which kill`
 
 CFLAGS=-Wall -Werror -Wextra --std=c11 -D_GNU_SOURCE
 LDFLAGS=-lm -lpthread -lfcgi
@@ -18,10 +18,11 @@ TPL_OUT=src/template_def.h
 
 .PHONY: clean tpl start stop
 
-all: tpl app
+#all: tpl app
+all: app
 
 app: $(OBJ)
-	$(CC) -o bin/$(APP) $(OBJS) $(LDFLAGS)
+	$(CC) -o bin/$(APP) $(OBJ) $(LDFLAGS)
 
 tpl:
 	$(TPL_GEN) -i $(TPL_IN) -o $(TPL_OUT)
