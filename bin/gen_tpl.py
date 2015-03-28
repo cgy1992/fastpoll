@@ -36,6 +36,9 @@ if __name__ == '__main__':
               in_def = True
 
           else:
+            if(len(consts[-1]['definition']) > 70 and len(consts[-1]['definition']) % 5 == 70):
+              consts[-1]['definition'] += '\n'
+
             if(ch == '\n'):
               nl_cnt += 1
 
@@ -47,9 +50,11 @@ if __name__ == '__main__':
 
   # write template makros
   with open(args.output[0], "w", encoding="utf-8") as tof:
-    print (consts)
     for const in consts:
       const['definition'] = re.sub('"', '\\"', const['definition'])
+      
+      spacing = len("#define " + const['name'].upper()) + 1
+      const['definition'] = re.sub('\n', '"\t\\\n' + spacing * ' ' + '"', const['definition'])
 
       if(len(const['name']) > 0 and len(const['definition']) > 0):
         tof.write("#define " + const['name'].upper() + " \"" + const['definition'] + "\"" + '\n' * 2);
