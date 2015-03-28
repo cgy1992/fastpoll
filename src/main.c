@@ -67,6 +67,11 @@ void fsp_serv(struct fsp *app)
   /* get uri-length */
   size_t rlen = strlen(req_uri);
   
+  /**
+   * note: those routes must be configured in nginx
+   * location ~ /(?:vote|poll)?$ { ... }
+   */
+  
   if (strncmp(req_uri, "/", rlen) == 0)
     /* serve home (index) */
     fsp_rt_home(app);
@@ -106,6 +111,63 @@ void fsp_puts(struct fsp *app UNUSED, const char *tx)
   puts(tx);
 }
 
+#define TPL_DOC_BEG ""                                                         \
+"<!DOCTYPE html>"                                                              \
+"<html lang=\"en\">"                                                           \
+  "<head>"                                                                     \
+    "<meta charset=\"utf-8\">"                                                 \
+    "<meta name=\"viewport\" content=\"inital-scale=1.0, "                     \
+      "width=device-width\">"                                                  \
+    ""                                                                         \
+    "<link rel=\"stylesheet\" href=\"css/main.css\">"                          \
+    "<link rel=\"stylesheet\" href=\"css/mobi.css\" "                          \
+      "media=\"all and (max-width: 799px)\">"                                  \
+    ""                                                                         \
+    "<title>FasterPoll</title>"                                                \
+  "</head>"                                                                    \
+  "<body>"
+
+#define TPL_HEADER ""                                                          \
+"<header id=\"head\">"                                                         \
+  "<div class=\"page\">"                                                       \
+    "<h1>FasterPoll</h1>"                                                      \
+    "<nav id=\"tnav\">"                                                        \
+      "<a href=\"index.html\">Home</a>"                                        \
+      "<a href=\"vote.html\">Vote</a>"                                         \
+      "<a href=\"result.html\">Result</a>"                                     \
+    "</nav>"                                                                   \
+  "</div>"                                                                     \
+"</header>"
+
+#define TPL_MAIN_BEG ""                                                        \
+"<main role=\"main\" id=\"main\">"                                             \
+  "<div class=\"page\">"
+
+#define TPL_MAIN_END ""                                                        \
+  "</div>"                                                                     \
+"</main>"
+
+#define TPL_FOOTER ""                                                          \
+"<footer id=\"foot\">"                                                         \
+  "<p class=\"page copy\">&copy; 2015 FastPoll</p>"                            \
+  "<p class=\"page\"><a href=\"#\">View source on Github</a></p>"              \
+"</footer>"
+
+#define TPL_DOC_END ""                                                         \
+  "<script src=\"js/main.js\" defer></script>"                                 \
+  "</body>"                                                                    \
+"</html>"
+
+#define TPL_BEG  \
+  TPL_DOC_BEG    \
+    TPL_HEADER   \
+    TPL_MAIN_BEG
+    
+#define TPL_END  \
+    TPL_MAIN_END \
+    TPL_FOOTER   \
+  TPL_DOC_END
+
 /**
  * home route
  * @param app
@@ -113,7 +175,14 @@ void fsp_puts(struct fsp *app UNUSED, const char *tx)
 void fsp_rt_home(struct fsp *app)
 {
   fsp_resp(app, 200, "text/html; Charset=UTF-8");
-  fsp_puts(app, "<!DOCTYPE html><h1>Home</h1>");
+  fsp_puts(app, 
+    TPL_BEG
+    "<h2>Hello world!</h2>"
+    "<div class=\"cbox view\">"
+      "<p>It fucking works!</p>"
+    "</div>"
+    TPL_END
+  );
 }
 
 /**
