@@ -1,6 +1,8 @@
 CC=`which gcc`
 TPL_GEN=`which python3` bin/gen_tpl.py
 RM=`which rm`
+SPWNCGI=`which spawn-fcgi`
+KILL=`which kill
 
 CFLAGS=-Wall -Werror -Wextra --std=c11 -D_GNU_SOURCE
 LDFLAGS=-lm -lpthread -lfcgi
@@ -34,7 +36,7 @@ clean:
 # debugging
  
 start:
-	spawn-fcgi -p 9000 -a 127.0.0.1 -f ../bin/$(APP) -P $(PID)
+	 $(SPWNCGI) -p 9000 -a 127.0.0.1 -f bin/$(APP) -P $(PID)
  
 stop:
-	kill -9 $$(cat $(PID))
+	$(KILL) -9 $$(cat $(PID))
