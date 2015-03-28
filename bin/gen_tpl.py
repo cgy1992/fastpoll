@@ -36,7 +36,7 @@ if __name__ == '__main__':
               in_def = True
 
           else:
-            if(len(consts[-1]['definition']) > 70 and len(consts[-1]['definition']) % 5 == 70):
+            if(len(consts[-1]['definition']) > 70 and len(consts[-1]['definition']) % 70 == 0):
               consts[-1]['definition'] += '\n'
 
             if(ch == '\n'):
@@ -52,7 +52,7 @@ if __name__ == '__main__':
   with open(args.output[0], "w", encoding="utf-8") as tof:
     for const in consts:
       const['definition'] = re.sub('"', '\\"', const['definition'])
-      
+
       spacing = len("#define " + const['name'].upper()) + 1
       const['definition'] = re.sub('\n', '"\t\\\n' + spacing * ' ' + '"', const['definition'])
 
