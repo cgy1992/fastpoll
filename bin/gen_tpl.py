@@ -1,6 +1,12 @@
 import sys
 import re
 import argparse
+from enum import IntEnum
+
+class Flags(IntEnum):
+  InDef = 1
+  InString = 2,
+  InNodeDecl = 4,
 
 if __name__ == '__main__':
   consts = [{'name': '', 'definition': ''}]
@@ -18,13 +24,13 @@ if __name__ == '__main__':
       if len(lines) < 1:
         sys.exit(1)
 
-      in_def = False
       nl_cnt = 0
+      flags = 0
 
       # parse lines 
       for line in lines:
         for ch in line:
-          if(in_def == False):
+          if(flags & Flags.InDef == False):
             if(nl_cnt > 0):
               nl_cnt = 0
               consts.append({'name': '', 'definition': ''})
@@ -33,30 +39,56 @@ if __name__ == '__main__':
               if(ch not in [' ', '\t', '\n']):
                 consts[-1]['name'] += ch 
             else:
-              in_def = True
+              flags |= Flags.InDef
 
           else:
-            if(len(consts[-1]['definition']) > 70 and len(consts[-1]['definition']) % 70 == 0):
-              consts[-1]['definition'] += '\n'
-
             if(ch == '\n'):
               nl_cnt += 1
 
               if(nl_cnt == 2):
-                in_def = False
+                flags ^= Flags.InDef
+
             else:
+              if(ch in ['\'', '"']):
+                flags ^= Flags.InString
+
+              elif(ch in ['<', '>']):
+                flags ^= Flags.InNodeDecl
+
               if(ch not in ['\t', '\n']):
-                consts[-1]['definition'] += ch
+                nl_cnt = 0
+
+                if(Flags.InNodeDecl & flags == False and ch == ' '): 
+                  pass
+
+                else:
+                  consts[-1]['definition'] += ch
 
   # write template makros
   with open(args.output[0], "w", encoding="utf-8") as tof:
     for const in consts:
       const['definition'] = re.sub('"', '\\"', const['definition'])
 
+      max_len = 80 - 2 # SPACE '/'
       spacing = len("#define " + const['name'].upper()) + 1
-      const['definition'] = re.sub('\n', '"\t\\\n' + spacing * ' ' + '"', const['definition'])
+      len_per_line = max_len - spacing
+      first_line = True
 
       if(len(const['name']) > 0 and len(const['definition']) > 0):
-        tof.write("#define " + const['name'].upper() + " \"" + const['definition'] + "\"" + '\n' * 2);
+        tof.write("#define " + const['name'].upper() + " ")
+
+        while len(const['definition']) > 0:
+          if(first_line == False):
+            tof.write(spacing * ' ')
+
+          tof.write('"' + const['definition'][0:len_per_line] + '"')
+
+          if(len(const['definition']) >= len_per_line):
+            tof.write(' /')
+
+          tof.write('\n')
+
+          const['definition'] = const['definition'][len_per_line:]
+          first_line = False
 
   sys.exit(0)
