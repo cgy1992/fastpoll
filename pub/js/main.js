@@ -1,6 +1,6 @@
 /*!
- * FasterPoll - FastCGI Poll Service
- * @copyright Copyright (c) 2015, The FasterPoll authors
+ * FastPoll - FastCGI Poll
+ * @copyright 2015 The FastPoll authors
  */
 
 ;(function() {
@@ -39,6 +39,7 @@
     id = fp.dataset.answ|0;
     mc = fp.querySelector('.more'); // additional answers container
     ab = fp.querySelector('.btn.add'); // add-button
+    
     /**
      * adds a new form-field
      */
@@ -67,6 +68,7 @@
       // disable button if necessary
       ab.disabled = id >= MAX_FIELDS;
     }
+    
     /**
      * checks if a new form-field should be added
      * and adds one if necessary
@@ -79,6 +81,7 @@
         if (af[i].value === '') return;
       addField();
     }
+    
     /**
      * adjusts the form
      */
@@ -86,16 +89,15 @@
       win.cancelAnimationFrame(ti);
       ti = win.requestAnimationFrame(maybeAddField);
     }
+    
     // setup form
     fp.addEventListener('keyup', adjustForm); // less frequent than keydown
     fp.addEventListener('paste', adjustForm);
     adjustForm(); // directly
     // setup add-button
-    (function() {
-      var af = fp.querySelectorAll('.answ input');
-      ab.disabled = af && af.length >= MAX_FIELDS;
-      ab.addEventListener('click', addField);
-    })();
+    var af = fp.querySelectorAll('.answ input');
+    ab.disabled = af && af.length >= MAX_FIELDS;
+    ab.addEventListener('click', addField);
   })();
   
 })();

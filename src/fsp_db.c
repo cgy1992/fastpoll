@@ -1,21 +1,33 @@
 /*!
- * FastCGI Poll "FastPoll"
- * Copyright (C) 2015 "asc"
- * License: MIT (see LICENSE.md)
+ * FastPoll - FastCGI Poll
+ * @copyright 2015 The FastPoll authors
  */
+
+#include <mysql.h>
 
 #include "fsp.h"
 #include "fsp_db.h"
 
-bool fsp_db_open(struct fsp_db *db UNUSED, 
-                 const char *name UNUSED,
-                 const char *user UNUSED,
-                 const char *pass UNUSED)
+#define DB_NAME "fastpoll"
+#define DB_USER "fastpoll"
+#define DB_PASS "1234"
+
+/**
+ * init and open databse
+ * @param  db     context
+ * @return        status
+ */
+bool fsp_db_open(struct fsp_db *db)
 {
+  db->is_open = true;
   return true;
 }
 
-void fsp_db_close(struct fsp_db *db UNUSED)
+/**
+ * close and cleanup database
+ * @param db   context
+ */
+void fsp_db_close(struct fsp_db *db)
 {
-  
+  db->is_open = false;
 }

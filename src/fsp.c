@@ -1,8 +1,8 @@
 /*!
- * FastCGI Poll "FastPoll"
- * Copyright (C) 2015 "asc"
- * License: MIT (see LICENSE.md)
+ * FastPoll - FastCGI Poll
+ * @copyright 2015 The FastPoll authors
  */
+
 #include <fcgi_stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -21,9 +21,7 @@
 bool fsp_init(struct fsp *app UNUSED)
 {
   /* setup db */
-  if (!fsp_db_open(&app->db, DB_NAME, 
-                             DB_USER, 
-                             DB_PASS)) {
+  if (!fsp_db_open(&app->db)) {
     fputs("database error", stderr);
     return false;
   }
@@ -37,7 +35,7 @@ bool fsp_init(struct fsp *app UNUSED)
  */
 void fsp_clear(struct fsp *app UNUSED)
 {
-  /* todo */
+  /* close database */
   fsp_db_close(&app->db);
 }
 

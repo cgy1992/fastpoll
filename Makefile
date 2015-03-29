@@ -5,8 +5,8 @@ SPWNCGI=`which spawn-fcgi`
 KILL=`which kill`
 SUDO=`which sudo`
 
-CFLAGS=-Wall -Werror -Wextra --std=c11 -D_GNU_SOURCE
-LDFLAGS=-lm -lpthread -lfcgi
+CFLAGS=-Wall -Werror -Wextra --std=c11 -D_GNU_SOURCE -I/usr/include/mysql
+LDFLAGS=-lm -lpthread -lfcgi -lmysqlclient
 
 APP=fastpoll
 PID=/var/run/$(APP).pid
