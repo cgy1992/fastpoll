@@ -93,9 +93,9 @@ TPL_PAGE_RESULT_BEG:
 
 TPL_PAGE_RESULT_ENTRY:
         <div class="rbox">
-            <p>%s</p>
-            <progress id="res_answ%d" value="%d" max="100">%d Votes (%d%%)</progress>
-            <p class="stat">%d Votes (%d%%)</p>
+            <p>{entry_name:%s}</p>
+            <progress id="res_answ{entry_id:%d}" value="{entry_per:%d}" max="100">{entry_value:%d} Votes ({entry_per:%d}%%)</progress>
+            <p class="stat">{entry_value:%d} Votes ({entry_per:%d}%%)</p>
           </div>
 
 TPL_PAGE_RESULT_END:

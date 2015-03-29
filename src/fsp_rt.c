@@ -47,8 +47,8 @@ void fsp_rt_poll(struct fsp *app)
   fsp_puts(app,   TPL_MAIN_BEG);
   
   fsp_printf(app,   TPL_PAGE_RESULT_BEG, "Testpoll");
-  fsp_printf(app,     TPL_PAGE_RESULT_ENTRY, "Foo", 0, 50, 5, 50, 5, 50);
-  fsp_printf(app,     TPL_PAGE_RESULT_ENTRY, "Bar", 1, 50, 5, 50, 5, 50);
+  fsp_render_tpl_page_result_entry("Foo", 0, 50, 5);
+  fsp_render_tpl_page_result_entry("Bar", 1, 50, 5);
   fsp_puts(app,     TPL_PAGE_RESULT_END);
 
   fsp_puts(app,   TPL_MAIN_END);
