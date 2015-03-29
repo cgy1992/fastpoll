@@ -53,3 +53,11 @@ void fsp_resp(struct fsp*, uint32_t, const char*);
  * @param tx    data
  */
 void fsp_puts(struct fsp*, const char*);
+
+/**
+ * output data 
+ * @param app 
+ * @param format
+ * @param args 
+ */
+void fsp_printf(struct fsp*, const char*, ...);

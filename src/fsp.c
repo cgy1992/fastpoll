@@ -98,3 +98,18 @@ void fsp_puts(struct fsp *app UNUSED, const char *tx)
 {
   puts(tx);
 }
+
+/**
+ * output data 
+ * @param app 
+ * @param format
+ * @param args 
+ */
+void fsp_printf(struct fsp *app UNUSED, const char* format, ...)
+{
+  va_list args;
+
+  va_start(args, format);
+  vprintf(format, args);
+  va_end(args);
+}
