@@ -5,6 +5,7 @@
  */
 
 #include "fsp.h"
+#include "template_def.h"
 
 /**
  * home route
@@ -13,7 +14,15 @@
 void fsp_rt_home(struct fsp *app)
 {
   fsp_resp(app, 200, "text/html; Charset=UTF-8");
-  fsp_puts(app, "<!DOCTYPE html><h1>Home</h1>");
+  fsp_puts(app, TPL_DOC_BEG);
+  fsp_puts(app,   TPL_HEADER);
+  fsp_puts(app,   TPL_MAIN_BEG);
+  
+  fsp_puts(app,     TPL_PAGE_HOME);
+
+  fsp_puts(app,   TPL_MAIN_END);
+  fsp_puts(app,   TPL_FOOTER);
+  fsp_puts(app, TPL_DOC_END);
 }
 
 /**
@@ -33,7 +42,18 @@ void fsp_rt_vote(struct fsp *app)
 void fsp_rt_poll(struct fsp *app)
 {
   fsp_resp(app, 200, "text/html; Charset=UTF-8");
-  fsp_puts(app, "<!DOCTYPE html><h1>Poll</h1>");
+  fsp_puts(app, TPL_DOC_BEG);
+  fsp_puts(app,   TPL_HEADER);
+  fsp_puts(app,   TPL_MAIN_BEG);
+  
+  fsp_printf(app,   TPL_PAGE_RESULT_BEG, "Testpoll");
+  fsp_printf(app,     TPL_PAGE_RESULT_ENTRY, "Foo", 0, 50, 5, 50, 5, 50);
+  fsp_printf(app,     TPL_PAGE_RESULT_ENTRY, "Bar", 1, 50, 5, 50, 5, 50);
+  fsp_puts(app,     TPL_PAGE_RESULT_END);
+
+  fsp_puts(app,   TPL_MAIN_END);
+  fsp_puts(app,   TPL_FOOTER);
+  fsp_puts(app, TPL_DOC_END);
 }
 
 /**
