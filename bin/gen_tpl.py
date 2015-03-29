@@ -5,8 +5,8 @@ from enum import IntEnum
 
 class Flags(IntEnum):
   InDef = 1
-  InString = 2,
-  InNodeDecl = 4,
+  InString = 2
+  InNodeDecl = 4
 
 if __name__ == '__main__':
   consts = [{'name': '', 'definition': ''}]
@@ -58,18 +58,19 @@ if __name__ == '__main__':
               if(ch not in ['\t', '\n']):
                 nl_cnt = 0
 
-                if(Flags.InNodeDecl & flags == False and ch == ' '): 
-                  pass
+                if(ch == ' '):
+                  if(Flags.InNodeDecl & flags != True and consts[-1]['definition'][-1:] is ' '):
+                    continue
 
-                else:
-                  consts[-1]['definition'] += ch
+                consts[-1]['definition'] += ch
 
   # write template makros
   with open(args.output[0], "w", encoding="utf-8") as tof:
     for const in consts:
       const['definition'] = re.sub('"', '\\"', const['definition'])
+      const['definition'] = re.sub('>(\s+)<', '><', const['definition'])
 
-      max_len = 80 - 2 # SPACE '/'
+      max_len = 80 - 2 # SPACE '\'
       spacing = len("#define " + const['name'].upper()) + 1
       len_per_line = max_len - spacing
       first_line = True
@@ -84,7 +85,7 @@ if __name__ == '__main__':
           tof.write('"' + const['definition'][0:len_per_line] + '"')
 
           if(len(const['definition']) >= len_per_line):
-            tof.write(' /')
+            tof.write(' \\')
 
           tof.write('\n')
 
