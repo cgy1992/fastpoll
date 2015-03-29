@@ -5,11 +5,11 @@ SPWNCGI=`which spawn-fcgi`
 KILL=`which kill`
 SUDO=`which sudo`
 
-CFLAGS=-Wall -Werror -Wextra --std=c11 -D_GNU_SOURCE -I/usr/include/mysql
+CFLAGS=-Wall -Werror -Wextra -Winline --std=c11 -D_GNU_SOURCE -I/usr/include/mysql
 LDFLAGS=-lm -lpthread -lfcgi -lmysqlclient
 
 APP=fastpoll
-PID=/var/run/$(APP).pid
+PID=/tmp/$(APP).pid
 
 SRC=$(shell find src -name '*.[c]')
 OBJ=$(SRC:%.c=%.o)
