@@ -215,12 +215,6 @@ class Builder:
 
     return func_body
 
-
-class Flags(IntEnum):
-  InDef = 1
-  InString = 2
-  InNodeDecl = 4
-
 if __name__ == '__main__':
   consts = [{'name': '', 'args': [], 'definition': ''}]
 
