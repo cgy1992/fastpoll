@@ -15,7 +15,7 @@ SRC=$(shell find src -name '*.[c]')
 OBJ=$(SRC:%.c=%.o)
 
 TPL_IN=$(shell find src -name '*.td')
-TPL_OUT=src/template_def.h
+TPL_OUT=src/template_def
 
 .PHONY: clean tpl start stop
 
@@ -26,7 +26,7 @@ app: $(OBJ)
 	$(CC) -o bin/$(APP) $(OBJ) $(LDFLAGS)
 
 tpl:
-	$(TPL_GEN) -i $(TPL_IN) -o $(TPL_OUT)
+	$(TPL_GEN) -l fsp.h fcgi_stdio.h -c -p fsp_ -u constant -i $(TPL_IN) -o $(TPL_OUT)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $^ -o $@
