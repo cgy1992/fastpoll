@@ -1,10 +1,6 @@
 import sys
 import re
 import argparse
-import collections
-from enum import IntEnum
-
-# TODO: more arguments (render function prefix, source-file, header, ..)
 
 class Util:
   # 1. whole placeholder, 2. name with delimiter, 3. name, 4. whole format, 5. flags, 6. padding, 7. type
@@ -229,7 +225,6 @@ if __name__ == '__main__':
   parser.add_argument('-c', '--context-args', action="store_const", const=True, default=False, help="use context struct as render function argument")
   parser.add_argument('-r', '--render-func', nargs=1, required=False, type=str, default=["printf"], help="which function to use for rendering (default: %(default)s)")
   parser.add_argument('-l', '--include-libs', nargs='+', required=False, type=str, help="include multiple files")
-  #parser.add_argument('-f', '--render-args', nargs='+', required=False, )
 
   args = parser.parse_args()
 
