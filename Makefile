@@ -1,5 +1,5 @@
 CC=`which gcc`
-TPL_GEN=`which python3` bin/gen_tpl.py
+TPL_GEN=`which python3` lib/gctpl/gctpl.py
 RM=`which rm`
 SPWNCGI=`which spawn-fcgi`
 KILL=`which kill`
