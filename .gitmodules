@@ -1,0 +1,3 @@
+[submodule "lib/gctpl"]
+	path = lib/gctpl
+	url = https://github.com/teslaNova/gctpl.git
