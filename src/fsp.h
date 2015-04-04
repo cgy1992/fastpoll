@@ -26,3 +26,5 @@
 
 /* lazy macro, allow unused vars */ 
 #define FSP_UNUSED __attribute__((unused))
+
+#define FSP_THREAD void *(*)(void *)
