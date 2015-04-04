@@ -28,3 +28,19 @@
 #define FSP_UNUSED __attribute__((unused))
 
 #define FSP_THREAD void *(*)(void *)
+
+#ifndef FSP_THREAD_COUNT
+# define FSP_THREAD_COUNT 20
+#endif /* FSP_THREAD_COUNT */
+
+#ifndef FSP_SOCKET_PATH
+# define FSP_SOCKET_PATH "/var/run/fastpoll.sock"
+#endif /* FSP_SOCKET_PATH */
+
+enum FSP_ERRNO
+{
+  FSP_ERR_NONE = 0,
+
+  FSP_ERR_FCGI_REQ,
+  FSP_ERR_FCGI_ACCEPT,
+};

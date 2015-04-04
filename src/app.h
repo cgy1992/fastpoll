@@ -6,9 +6,12 @@
  */
 
 #include "fsp.h"
+#include "req.h"
 
 // #include "db.h"
 // #include "mem.h"
+
+#include <pthread.h> 
 
 /**
  * application context
@@ -25,10 +28,11 @@ struct fsp_app {
   /* global memcache handle */
   struct fsp_mem mem;
 #endif
-};
+  struct fsp_req_list requests;
 
-/* used in fsp_app_handle(...) */
-struct fsp_req;
+  pthread_t tid[FSP_THREAD_COUNT];
+  int sid;
+};
 
 /**
  * global initializer
@@ -39,12 +43,18 @@ struct fsp_req;
 FSP_API bool fsp_app_init(struct fsp_app*);
 
 /**
- * handles a request
+ * starts the main app routines
  * 
  * @param    app-context
- * @param    request-context
  */
-FSP_API void fsp_app_handle(struct fsp_app*, struct fsp_req*);
+FSP_API void fsp_app_start(struct fsp_app*);
+
+/**
+ * stops the main app routines
+ * 
+ * @param    app-context
+ */
+FSP_API void fsp_app_stop(struct fsp_app*);
 
 /**
  * global destructor
