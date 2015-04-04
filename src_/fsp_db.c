@@ -10,7 +10,7 @@
 
 #define DB_NAME "fastpoll"
 #define DB_USER "fastpoll"
-#define DB_PASS "1234"
+#define DB_PASS "fPZ3wzPu8rUhhwRB"
 
 /**
  * init and open databse

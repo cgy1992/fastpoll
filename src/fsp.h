@@ -5,59 +5,24 @@
  * @copyright 2015 The FastPoll authors
  */
 
-#include <stdint.h>
-#include <stdbool.h>
+/* note: do not include fgci_stdio.h here */
 
-#define UNUSED __attribute__((unused))
- ; /* sublime bug */
+#include <stddef.h>  /* size_t, NULL etc. */
+#include <stdint.h>  /* int32_t etc. */
+#include <stdbool.h> /* bool, true, false */
 
-#include "fsp_db.h"
+#ifdef _WIN32
+ #ifndef __MINGW32__
+  #error get a real c compiler and try again.
+ #endif
+ /* required to make func-defs visible in windows dll's */
+ #define FSP_API __declspec(dllexport)
+#else
+ #define FSP_API
+#endif
 
-/**
- * fastpoll context
- */
-struct fsp {
-  /* persistent data etc... */
-  struct fsp_db db;
-};
+/* debug-mode: 1 = on, 0 = off */
+#define FSP_DEBUG 1
 
-/**
- * initializer
- * @param app  application context
- */
-bool fsp_init(struct fsp*);
-
-/**
- * destructor
- * @param app  application context
- */
-void fsp_clear(struct fsp*);
-
-/**
- * request handler (server)
- * @param app  application context
- */
-void fsp_serv(struct fsp*);
-
-/**
- * start response
- * @param app 
- * @param sc   status code
- * @param ct   content-type
- */
-void fsp_resp(struct fsp*, uint32_t, const char*);
-
-/**
- * output data 
- * @param app 
- * @param tx    data
- */
-void fsp_puts(struct fsp*, const char*);
-
-/**
- * output data 
- * @param app 
- * @param format
- * @param args 
- */
-void fsp_printf(struct fsp*, const char*, ...);
+/* lazy macro, allow unused vars */ 
+#define FSP_UNUSED __attribute__((unused))
