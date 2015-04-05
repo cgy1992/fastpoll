@@ -1,2 +1,5 @@
 *.o
+/run/*
+!/run/.gitkeep
 /bin/fastpoll
+nginx_asc.conf
