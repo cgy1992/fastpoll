@@ -1,0 +1,152 @@
+#include "queue.h"
+
+#include <stdlib.h>
+#include <string.h>
+
+#ifdef FSP_DEBUG
+# include <stdio.h>
+#endif
+
+#define QUEUE_ALLOC_SIZE 10
+
+void fsp_queue_rearrange(struct queue*);
+
+void fsp_queue_init(struct queue *q)
+{
+  if(q == NULL) {
+    return;
+  }
+
+  q->front = q->back = q->data = malloc(QUEUE_ALLOC_SIZE * sizeof(void*));
+  q->size = QUEUE_ALLOC_SIZE;
+}
+
+void fsp_queue_free(struct queue *q)
+{
+  if(q == NULL) {
+    return;
+  }
+
+  if(q->data != NULL) {
+    free(q->data);
+  }
+
+  q->data = q->front = q->back = NULL;
+  q->size = 0;
+}
+
+void fsp_queue_push(struct queue *q, void *e)
+{
+  if(q == NULL || e == NULL) {
+    return;
+  }
+
+  fsp_queue_rearrange(q);
+
+#ifdef FSP_DEBUG
+  printf("(push at pos %ld)\n", (q->back - q->data) + 1);
+#endif
+
+  if(q->back == &q->data[q->size - 1]) { // space for 1 element left, reallocating for more space
+#ifdef FSP_DEBUG    
+    printf("(reallocating for %d new elements)\n", QUEUE_ALLOC_SIZE);
+#endif
+
+    size_t pos_front = q->front - q->data;
+
+    q->data = realloc(q->data, (q->size + QUEUE_ALLOC_SIZE) * sizeof(void*));
+    
+    q->back = &q->data[q->size - 1];
+    q->front = &q->data[pos_front];
+
+    q->size += QUEUE_ALLOC_SIZE;
+  }
+
+  
+  *q->back = e;
+
+  if(q->front == NULL) // korrekt?!
+  {
+    //printf("\nduh\n");
+    q->front = q->back;
+  }
+
+  q->back++;
+}
+
+void *fsp_queue_pop(struct queue *q)
+{
+  if(q == NULL || q->front == NULL) {
+    return NULL;
+  }
+
+  void *e = *q->front;
+
+  if(++q->front == q->back) {
+    q->front = NULL;
+  }
+
+  return e;
+}
+
+bool fsp_queue_empty(struct queue *q)
+{
+  if(q == NULL || q->front == NULL) {
+    return true;
+  }
+
+  return false;
+}
+
+size_t fsp_queue_size(struct queue *q)
+{
+  if(q == NULL) {
+    return 0;
+  }
+
+  return (q->front == NULL ? 0 : (q->back - q->data) - (q->front - q->data));
+}
+
+/* INTERNAL */
+void fsp_queue_rearrange(struct queue *q)
+{
+  if(q == NULL) {
+    return;
+  }
+
+  if(q->front != q->data) { // unused memory
+
+    if(q->front == NULL) {
+      
+      q->back = q->data;
+
+    } else if(q->front - q->data >= (QUEUE_ALLOC_SIZE - 1)) {
+#ifdef FSP_DEBUG      
+      printf("(unused spaces: %ld, elements in queue: %ld)\n", q->front - q->data, (q->back - q->front));
+#endif
+
+      size_t elements = (q->back - q->front);
+      memcpy(q->data, q->front, elements);
+
+      q->back = &q->data[elements];
+      q->front = q->data;
+    }
+  }
+
+  if((q->size - (q->back - q->data)) > (QUEUE_ALLOC_SIZE + QUEUE_ALLOC_SIZE / 2)) {
+    size_t elements = q->back - q->data;
+    size_t chunks = (q->size - (elements + QUEUE_ALLOC_SIZE / 2)) / QUEUE_ALLOC_SIZE;
+
+#ifdef FSP_DEBUG
+    printf("(shrinking queue by %ld chunks, old size: %ld, new size: %ld)\n", chunks, q->size, (q->size - (chunks * QUEUE_ALLOC_SIZE)));
+#endif
+
+    q->data = realloc(q->data, (q->size - (chunks * QUEUE_ALLOC_SIZE)) * sizeof(void*));
+    q->back = &q->data[elements - 1];
+    q->size = (q->size - (chunks * QUEUE_ALLOC_SIZE));
+
+    if(q->front != NULL) {
+      q->front = q->data;
+    }
+  }
+}
