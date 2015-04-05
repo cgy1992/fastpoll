@@ -5,11 +5,14 @@ SPWNCGI=`which spawn-fcgi`
 KILL=`which kill`
 SUDO=`which sudo`
 
-CFLAGS=-Wall -Werror -Wextra -Winline --std=c11 -D_GNU_SOURCE -I/usr/include/mysql
+CFLAGS=-Wall -Werror -Wextra -Winline --std=c11 -D_GNU_SOURCE -I/usr/include/mysql -I./inc
 LDFLAGS=-lm -lpthread -lfcgi -lmysqlclient
 
 APP=fastpoll
-PID=/tmp/$(APP).pid
+CWD=$(shell readlink -f .)
+OUT=$(CWD)/bin/$(APP)
+PID=$(CWD)/run/$(APP).pid
+SOCK=$(CWD)/run/$(APP).sock
 
 SRC=$(shell find src -name '*.[c]')
 OBJ=$(SRC:%.c=%.o)
@@ -23,7 +26,7 @@ TPL_OUT=src/template_def
 all: app
 
 app: $(OBJ)
-	$(CC) -o bin/$(APP) $(OBJ) $(LDFLAGS)
+	$(CC) -o $(OUT) $(OBJ) $(LDFLAGS)
 
 tpl:
 	$(TPL_GEN) -l fsp.h fcgi_stdio.h -c -p fsp_ -u constant -i $(TPL_IN) -o $(TPL_OUT)
@@ -38,7 +41,8 @@ clean:
 # debugging
  
 start:
-	$(SPWNCGI) -p 9000 -a 127.0.0.1 -f bin/$(APP) -P $(PID)
+	$(SPWNCGI) -s $(SOCK) -f $(OUT) -P $(PID)
  
 stop:
-	$(SUDO) $(KILL) -9 $(shell cat $(PID))
+	$(KILL) -9 $(shell cat $(PID))
+	$(RM) $(PID)
