@@ -6,19 +6,12 @@
  */
 #include "fsp.h"
 #include "fcgx.h"
+#include "queue.h"
 
 #include <pthread.h>
 
 /* used for requests */
 struct fsp_app;
-
-enum FSP_REQ_STATE
-{
-  FSP_RS_CLOSED = 0,
-  FSP_RS_OPEN,
-  FSP_RS_PROC,
-  FSP_RS_SERVED
-};
 
 /* used in fsp_app_handle(...) */
 struct fsp_req {
@@ -27,17 +20,13 @@ struct fsp_req {
 };
 
 struct fsp_req_list {
-  struct fsp_req *list;
-  unsigned count;
+  struct queue queue;
 
   pthread_mutex_t mtx;
 };
 
 void fsp_req_init(struct fsp_app*);
 void fsp_req_cleanup(struct fsp_app*);
-
-void fsp_reqs_insert(struct fsp_app*, struct fcgx_req*);
-struct fsp_req* fsp_reqs_get(struct fsp_app*);
 
 void* fsp_thrd_req_manage(struct fsp_app*) FSP_UNUSED;
 void* fsp_thrd_req_serve(struct fsp_app*) FSP_UNUSED;
