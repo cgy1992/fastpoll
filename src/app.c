@@ -52,11 +52,12 @@ FSP_API void fsp_app_start(struct fsp_app *app)
   /* spawn threads */
   pthread_create(&app->tid[0], NULL, (FSP_THREAD)fsp_thrd_req_manage, (void *)app);
 
-  for (long i = 2; i < FSP_THREAD_COUNT; ++i)
+  for (long i = 1; i < FSP_THREAD_COUNT; ++i)
     pthread_create(&app->tid[i], NULL, (FSP_THREAD)fsp_thrd_req_serve, (void *) app);
   
   /* start server on main thread */
-  fsp_thrd_req_cleanup(app);
+  //fsp_thrd_req_cleanup(app);
+  //fsp_thrd_req_serve(app);
   
   /* join threads */
   for (long i = 1; i < FSP_THREAD_COUNT; ++i)

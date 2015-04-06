@@ -19,9 +19,7 @@ void fsp_req_init(struct fsp_app *app)
     return;
   }
 
-  app->requests.list = calloc(1, sizeof(struct fsp_req) * REQUEST_LIMIT);
-  app->requests.count = 0;
-
+  fsp_queue_init(&app->requests.queue);
   pthread_mutex_init(&app->requests.mtx, 0);
 }
 
@@ -33,60 +31,7 @@ void fsp_req_cleanup(struct fsp_app *app)
   }
 
   pthread_mutex_destroy(&app->requests.mtx);
-
-  if(app->requests.list != NULL)
-  {
-    free(app->requests.list);
-
-    app->requests.list = NULL;
-  }
-
-  app->requests.count = 0;
-}
-
-void fsp_reqs_insert(struct fsp_app *app, struct fcgx_req *req)
-{
-  pthread_mutex_lock(&app->requests.mtx);
-
-  while(app->requests.count == REQUEST_LIMIT) {
-    //sleep(1);
-  }
-  
-  for(unsigned i=0; i<REQUEST_LIMIT; i++) {
-    if(app->requests.list[i].state == FSP_RS_CLOSED) {
-      app->requests.count++;
-
-      app->requests.list[i].req = req;
-      app->requests.list[i].state = FSP_RS_OPEN;
-
-      break;
-    }
-  }
-
-  pthread_mutex_unlock(&app->requests.mtx);
-}
-
-struct fsp_req* fsp_reqs_get(struct fsp_app *app) // make inline
-{ 
-  struct fsp_req *req = NULL;
-
-  if(app->requests.count > 0) {
-    pthread_mutex_lock(&app->requests.mtx);
-
-    for(unsigned i=0; i<REQUEST_LIMIT; i++) {
-      if(app->requests.list[i].state == FSP_RS_OPEN)
-      {
-        req = &app->requests.list[i];
-        req->state = FSP_RS_PROC;
-
-        break;
-      }
-    }
-    
-    pthread_mutex_unlock(&app->requests.mtx);
-  }
-
-  return req;
+  fsp_queue_free(&app->requests.queue);
 }
 
 void* fsp_thrd_req_manage(struct fsp_app *app)
@@ -105,8 +50,17 @@ void* fsp_thrd_req_manage(struct fsp_app *app)
   for(;;) {
     req = calloc(1, sizeof(struct fcgx_req));
 
+    if(req == NULL) {
+#ifdef FSP_DEBUG
+      printf("(-- ERROR: allocation failed %s in %s at %d --)\n", __FILE__, __FUNCTION__, __LINE__);
+#endif
+
+      continue;
+    }
+
     if (fcgx_req_init(req, app->sid, 0) != 0) {
       //error(-1, FSP_ERR_FCGI_REQ, "error: could not initialize fcgi request");
+      free(req);
       return NULL;
     }
 
@@ -122,7 +76,10 @@ void* fsp_thrd_req_manage(struct fsp_app *app)
     }
 
     printf("received request: %p\n", req->out);
-    fsp_reqs_insert(app, req);
+
+    //pthread_mutex_lock(&app->requests.mtx);
+    fsp_queue_push(&app->requests.queue, req);
+    //pthread_mutex_unlock(&app->requests.mtx);
   }
 
   //pthread_mutex_destroy(&mtx);
@@ -132,7 +89,7 @@ void* fsp_thrd_req_manage(struct fsp_app *app)
 
 void* fsp_thrd_req_serve(struct fsp_app *app)
 {
-  struct fsp_req *r;
+  struct fcgx_req *r;
 
   if(app == NULL)
   {
@@ -140,22 +97,40 @@ void* fsp_thrd_req_serve(struct fsp_app *app)
   }
 
   for (;;) {
-    if((r = fsp_reqs_get(app)) == NULL) {
-      //sleep(1);
+
+    //pthread_mutex_lock(&app->requests.mtx);
+    /*if(fsp_queue_empty(&app->requests.queue) == true) {
+      usleep(150);
+      continue;
+    }*/
+
+    
+    r = fsp_queue_pop(&app->requests.queue);
+    
+    if(r == NULL) {
+      usleep(50);
       continue;
     }
+    //pthread_mutex_unlock(&app->requests.mtx);
 
-    printf("handling request (state: %d, out: %p)\n", r->state, r->req->out);
-    
-    fcgx_fputs("Status: 200\r\n", r->req->out);
-    fcgx_fputs("Content-Type: text/plain; Charset=UTF-8\r\n", r->req->out);
-    fcgx_fputs("\r\n", r->req->out);
-    fcgx_fputs("hello world!\r\n", r->req->out);
-    //fcgx_fprintf(r->req.out, "thread: %ld", tid);
-    
-    printf("handled request\n");
+    printf("handling request (%p)\n", r);
 
-    r->state = FSP_RS_SERVED;
+    if(r->out != NULL) {
+      printf(" (out: %p)\n", r->out);
+      
+      fcgx_fputs("Status: 200\r\n", r->out);
+      fcgx_fputs("Content-Type: text/plain; Charset=UTF-8\r\n", r->out);
+      fcgx_fputs("\r\n", r->out);
+      fcgx_fputs("hello world!\r\n", r->out);
+      //fcgx_fprintf(r->req.out, "thread: %ld", tid);
+      
+      printf("handled request\n");
+    }
+
+    if(r != NULL) {
+      fcgx_req_finish(r);
+      free(r);
+    }
   }
   
   
@@ -169,14 +144,13 @@ void* fsp_thrd_req_cleanup(struct fsp_app *app)
     return NULL;
   }
 
-  while(NULL != app->requests.list){
+  /*while(NULL != app->requests.list){
     for(unsigned i=0; i<REQUEST_LIMIT && app->requests.count > 0; i++)
     {
       if(app->requests.list[i].state == FSP_RS_SERVED)
       {
         printf("cleaning up request #%d\n", i+1);
-        fcgx_req_finish(app->requests.list[i].req);
-        free(app->requests.list[i].req);
+        
 
         memset(&app->requests.list[i], 0, sizeof(struct fsp_req)); // just to be sure everything is reset..
         app->requests.count--;
@@ -184,7 +158,7 @@ void* fsp_thrd_req_cleanup(struct fsp_app *app)
     }
 
     //sleep(1);
-  }
+  }*/
 
   return app;
 }
