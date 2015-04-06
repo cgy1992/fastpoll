@@ -13,6 +13,11 @@
 
 #include <pthread.h> 
 
+ enum {
+  FSP_THREAD_ACCEPT = 0,
+  FSP_THREAD_HANDLE = 1
+ };
+
 /**
  * application context
  * 
@@ -28,9 +33,10 @@ struct fsp_app {
   /* global memcache handle */
   struct fsp_mem mem;
 #endif
-  struct fsp_req_list requests;
+  struct queue requests;
 
   pthread_t tid[FSP_THREAD_COUNT];
+
   int sid;
 };
 

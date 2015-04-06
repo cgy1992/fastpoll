@@ -49,15 +49,11 @@ FSP_API void fsp_app_start(struct fsp_app *app)
   umask(0);  
   app->sid = fcgx_open_socket(FSP_SOCKET_PATH, 2000);
   
-  /* spawn threads */
-  pthread_create(&app->tid[0], NULL, (FSP_THREAD)fsp_thrd_req_manage, (void *)app);
-
-  for (long i = 1; i < FSP_THREAD_COUNT; ++i)
-    pthread_create(&app->tid[i], NULL, (FSP_THREAD)fsp_thrd_req_serve, (void *) app);
+  /* spawn request-handler thread */
+  pthread_create(&app->tid[FSP_THREAD_HANDLE], NULL, (FSP_THREAD)fsp_thrd_req_handle, (void *) app);
   
   /* start server on main thread */
-  //fsp_thrd_req_cleanup(app);
-  //fsp_thrd_req_serve(app);
+  app->tid[FSP_THREAD_ACCEPT] = 0; fsp_thrd_req_accept(app);
   
   /* join threads */
   for (long i = 1; i < FSP_THREAD_COUNT; ++i)

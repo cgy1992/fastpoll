@@ -33,8 +33,9 @@ void fsp_queue_init(struct queue *q)
   q->back = q->data = malloc(QUEUE_ALLOC_SIZE * sizeof(void*));
 
   if(q->data == NULL) {
-#ifdef FSP_DEBUG
+#if FSP_DEBUG == 1
       printf("(-- ERROR: allocation failed: %s in %s at %d --)\n", __FILE__, __FUNCTION__, __LINE__);
+      return;
 #endif    
   }
 
@@ -86,12 +87,12 @@ void fsp_queue_push(struct queue *q, void *e)
 
   fsp_queue_rearrange(q);
 
-#ifdef FSP_DEBUG
+#if FSP_DEBUG == 1
   printf("(push at pos %ld)\n", (q->back - q->data) + 1);
 #endif
 
   if(q->back == &q->data[q->size - 1]) { // space for 1 element left, reallocating for more space
-#ifdef FSP_DEBUG    
+#if FSP_DEBUG == 1
     printf("(reallocating for %d new elements)\n", QUEUE_ALLOC_SIZE);
 #endif
 
@@ -101,8 +102,9 @@ void fsp_queue_push(struct queue *q, void *e)
 
     if(q->data == NULL)
     {
-#ifdef FSP_DEBUG
+#if FSP_DEBUG == 1
       printf("(-- ERROR: allocation failed: %s in %s at %d --)\n", __FILE__, __FUNCTION__, __LINE__);
+      return;
 #endif
     }
     
@@ -177,7 +179,7 @@ size_t fsp_queue_size(struct queue *q)
     return 0;
   }
 
-  return (q->front == NULL ? 0 : (q->back - q->data) - (q->front - q->data));
+  return (q->front == NULL ? 0 : (q->back - q->front) + 1);
 }
 
 /**
@@ -200,44 +202,55 @@ static inline void fsp_queue_rearrange(struct queue *q)
       
       q->back = q->data;
 
-    } else if(q->front - q->data >= (QUEUE_ALLOC_SIZE - 1)) { // TODO: use more suited value 
-#ifdef FSP_DEBUG      
-      printf("(unused spaces: %ld, elements in queue: %ld)\n", q->front - q->data, (q->back - q->front));
+    } else {
+      long elements = (q->back - q->front) + 1,
+            unused = (q->front - q->data);
+
+      if(unused < (QUEUE_ALLOC_SIZE / 2)) {
+        goto shrink;
+      }
+
+#if FSP_DEBUG == 1
+      printf("(unused spaces: %ld, elements in queue: %ld)\n", unused, elements);
 #endif
 
-      size_t elements = (q->back - q->front);
-      memcpy(q->data, q->front, elements);
+      //memmove(q->data, q->front, elements * sizeof(void*));
+      bcopy(q->front, q->data, elements * sizeof(void*));
 
-      q->back = &q->data[elements];
+      q->back = q->back - unused;
       q->front = q->data;
     }
   }
 
-  if((q->size - (q->back - q->data)) > (QUEUE_ALLOC_SIZE + QUEUE_ALLOC_SIZE / 2)) {
-    size_t elements = q->back - q->data;
-    size_t chunks = (q->size - (elements + QUEUE_ALLOC_SIZE / 2)) / QUEUE_ALLOC_SIZE;
+shrink:;
+  size_t elements = (q->back - q->data) + 1,
+          front_element = 0,
+          unused = (q->size - elements),
+          chunks_unused = (unused / QUEUE_ALLOC_SIZE);
 
-#ifdef FSP_DEBUG
-    printf("(shrinking queue by %ld chunks, old size: %ld, new size: %ld)\n", chunks, q->size, (q->size - (chunks * QUEUE_ALLOC_SIZE)));
+  if(q->front != NULL && q->front != q->data) {
+    front_element = (q->front - q->data);
+  }
+
+  if(chunks_unused > 1) {
+    q->size -= ((chunks_unused - 1) * QUEUE_ALLOC_SIZE);
+
+#if FSP_DEBUG == 1 
+    printf("(used elements: %ld, unused elements: %ld, shrinking queue by %ld chunks, new size: %ld chunks)\n", 
+        elements, unused, chunks_unused-1, q->size / QUEUE_ALLOC_SIZE);
 #endif
 
-    q->data = realloc(q->data, (q->size - (chunks * QUEUE_ALLOC_SIZE)) * sizeof(void*));
-    q->size = (q->size - (chunks * QUEUE_ALLOC_SIZE));
+    q->data = realloc(q->data, q->size * sizeof(void*));
 
-    if(q->data == NULL) {
-#ifdef FSP_DEBUG
-      printf("(-- ERROR: allocation failed: %s in %s at %d --)\n", __FILE__, __FUNCTION__, __LINE__);
+#if FSP_DEBUG == 1
+    printf("(-- ERROR: allocation failed: %s in %s at %d --)\n", __FILE__, __FUNCTION__, __LINE__);
+    return;
 #endif
-    }
 
-    if(elements > 0) {
-      q->back = &q->data[elements - 1];
-    } else {
-      q->back = q->data;
-    }
+    q->back = &q->data[elements - 1];
 
     if(q->front != NULL) {
-      q->front = q->data;
+      q->front = &q->data[front_element];
     }
   }
 }

@@ -9,6 +9,10 @@
 
 #include <pthread.h>
 
+/**
+ * queue context
+ *
+ */
 struct queue 
 {
   void **data, **front, **back;
