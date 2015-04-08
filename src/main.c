@@ -21,6 +21,7 @@
 
 /* socket fd */
 static int sock_id;
+static mtx_t mtx;
 
 /**
  * pthread callback
@@ -42,8 +43,6 @@ static void serve(void *a)
   }
   
   int rc; /* used for fcgx_req_accept() */
-  mtx_t mtx;
-  mtx_init(&mtx, 0);
   
   /* start accept loop */
   for (;;) {
@@ -103,7 +102,9 @@ int main(void)
   
   if (!fsp_app_init(&app))
     return 1;
-
+  
+  mtx_init(&mtx, 0);
+  
   /* fcgi handler */
   listen(&app);
   
