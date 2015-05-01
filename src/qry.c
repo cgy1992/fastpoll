@@ -15,6 +15,8 @@
 /* sublime bug */
  ;
 
+#define DBG(m) printf("%s %s(...): %s\n", __FILE__, __func__, m)
+
 /**
  * simple routine to check if a string "looks" numeric (signed 32bit)
  *
@@ -75,14 +77,6 @@ static inline bool set_name(struct fsp_qry *qry,
   strncpy(item->name, str, len);
   return true;
 }
-
-/**
- * parses a list of items
- *
- * @param  fsp_qry context
- * @return         NULL on failure
- */
-static struct fsp_qry_item *parse_items(struct fsp_qry*);
 
 /**
  * parses a single item
@@ -168,9 +162,22 @@ bool fsp_qry_parse(struct fsp_qry *qry, const char *inp)
   /* assign values */
   qry->raw = inp;
   qry->ptr = qry->raw;
-  /* begin parse */
-  qry->list = parse_items(qry);
-  return qry->list != NULL;
+  /* parse first item */
+  qry->list = parse_item(qry);
+  if (!qry->list) return false;
+  /* parse rest */
+  struct fsp_qry_item *curr = qry->list,
+                      *prev = NULL;
+  while (*(qry->ptr) == '&') {
+    ++(qry->ptr); /* skip '&' */
+    curr->prev = prev;
+    curr->next = parse_item(qry);
+    if (!(curr->next)) return false;
+    prev = curr;
+    curr = curr->next;
+  }
+  /* top of the list */
+  return true;
 }
 
 /**
@@ -210,7 +217,7 @@ static struct fsp_qry_item *parse_item(struct fsp_qry *qry)
   struct fsp_qry_item *curr;
   for (curr = qry->list; 
        curr != NULL; 
-       curr = curr->next)
+       curr = curr->next) 
     if (0 == strncmp(curr->name, pos, name_len)) {
       /* override this item */
       base = curr;
@@ -235,6 +242,10 @@ static struct fsp_qry_item *parse_item(struct fsp_qry *qry)
       !parse_item_value(qry, item))
     return NULL;
   /* otherwise, we're done here */
+  printf("base: %p (%s), prev: %p, next: %p\n", 
+    base, base->name, base->prev, base->next);
+  printf("item: %p (%s), prev: %p, next: %p\n", 
+    item, item->name, item->prev, item->next);
   return base;
 }
 
@@ -278,13 +289,13 @@ static struct fsp_qry_item *parse_item_offsets(struct fsp_qry *qry,
           /* could not create a new item */
           return NULL;
         /* add it to the end of the list */
-        new_item->prev = item->value.map_val->next;
-        item->value.map_val->next = new_item;
+        new_item->next = item->value.map_val;
+        if (item->value.map_val != NULL)
+          item->value.map_val->prev = new_item;
+        item->value.map_val = new_item;
         /* assign name */
-        if (!(new_item->name = fsp_pool_take(&(qry->pool), 
-                                             name_len + 1)))
+        if (!(set_name(qry, new_item, pos, name_len)))
           return NULL;
-        strncpy(new_item->name, pos, name_len);
         /* if the name is numeric, adjust index_max too */
         if (looks_numeric(new_item->name, name_len)) {
           /* note: atoi SHOULD be safe now */
@@ -298,44 +309,24 @@ static struct fsp_qry_item *parse_item_offsets(struct fsp_qry *qry,
       if (!(new_item = create_item(qry)))
         return NULL;
       /* avoid overflow */
-      if (item->index_max < 0x7fffffff)
-        ++item->index_max;
-      if (!(new_item->name = fsp_pool_take(&(qry->pool), 11)))
+      if (!(new_item->name = fsp_pool_take(&(qry->pool), 12)))
         return NULL;
       /* stringify index and store it as name */
-      snprintf(new_item->name, 10, "%d", item->index_max);
+      snprintf(new_item->name, 11, "%d", item->index_max);
+      /* add it to the end of the list */
+      new_item->next = item->value.map_val;
+      if (item->value.map_val != NULL)
+        item->value.map_val->prev = new_item;
+      item->value.map_val = new_item;
+      /* increment index */
+      if (item->index_max < 0x7fffffff)
+        ++item->index_max;
     }
     /* start all over again */
     item = new_item;
-    ++qry->ptr; /* skip ']' */     
+    ++(qry->ptr); /* skip ']' */
   }
   /* "item" should now point to the correct sub-item */
-  return item;
-}
-
-/**
- * parses a list of items
- *
- * @param  fsp_qry context
- * @return         NULL on failure
- */
-static struct fsp_qry_item *parse_items(struct fsp_qry *qry)
-{
-  /* parse first item */
-  struct fsp_qry_item *item = parse_item(qry),
-                      *curr = item,
-                      *prev = NULL;
-  if (!item) return NULL;
-  /* parse following items */
-  while (*(qry->ptr) == '&') {
-    ++(qry->ptr); /* skip '&' */
-    curr->prev = prev;
-    curr->next = parse_item(qry);
-    if (!(curr->next)) break;
-    prev = curr;
-    curr = curr->next;
-  }
-  /* top of the list */
   return item;
 }
 
@@ -359,6 +350,7 @@ static bool parse_item_value(struct fsp_qry *qry,
   if (!(value_ptr = fsp_pool_take(&(qry->pool), value_len + 1)))
     return false;
   strncpy(value_ptr, pos, value_len);
+  item->type = FSP_QRY_STR;
   item->value.str_val = value_ptr;
   return true;
 }

@@ -45,7 +45,7 @@ routes[] = {
  * @return   true on success, false on failure
  */
 bool fsp_app_init(struct fsp_app *app)
-{  
+{   
   /* init database */
   if (!fsp_db_init(&app->db))
     return false;
@@ -66,7 +66,7 @@ bool fsp_app_init(struct fsp_app *app)
  */
 void fsp_app_process(struct fsp_app *app, 
                      struct fcgx_req *req)
-{
+{  
   /* get request uri */
   char *req_uri = fcgx_req_param(req, "REQUEST_URI");
   size_t req_len = 0;
@@ -115,6 +115,34 @@ void fsp_app_destroy(struct fsp_app *app)
 
 /* ------------------------------------ */
 
+static void dump_qry_list(struct fsp_qry_item *list, 
+                          struct fcgx_req *req, 
+                          int tab)
+{
+  struct fsp_qry_item *item;
+  
+  for (item = list; 
+       item != NULL; 
+       item = item->next) {
+    fcgx_fputs("<br>\n", req->out);
+    for (int i = 0; i < tab; ++i)
+      fcgx_fputs("&nbsp;&nbsp;", req->out);
+    fcgx_fputs("name: ", req->out);
+    fcgx_fputs(item->name, req->out);
+    fcgx_fputs(", value: ", req->out);
+    if (item->type == FSP_QRY_STR)
+      fcgx_fputs(item->value.str_val, req->out);
+    else {
+      fcgx_fputs("{", req->out);
+      dump_qry_list(item->value.map_val, req, tab + 1);
+      fcgx_fputs("<br>", req->out);
+      for (int i = 0; i < tab; ++i)
+        fcgx_fputs("&nbsp;&nbsp;", req->out);
+      fcgx_fputs("}", req->out);
+    }
+  }
+} 
+
 /* home route controller */
 static void rt_home(struct fsp_app *app FSP_UNUSED, 
                     struct fcgx_req *req)
@@ -123,7 +151,18 @@ static void rt_home(struct fsp_app *app FSP_UNUSED,
   fcgx_fputs("Status: 200\r\n", req->out);
   fcgx_fputs("Content-Type: text/html; Charset=UTF-8\r\n", req->out);
   fcgx_fputs("\r\n", req->out);
-  fcgx_fputs(FSP_TPL_HOME, req->out);
+  fcgx_fputs("<!DOCTYPE html>", req->out);
+  
+  const char *query_str = fcgx_req_param(req, "QUERY_STRING");
+  struct fsp_qry qry;
+  fsp_qry_init(&qry);
+  
+  if (fsp_qry_parse(&qry, query_str))
+    dump_qry_list(qry.list, req, 0);
+  else
+    fcgx_fputs("could not parse query string", req->out);
+  
+  //fcgx_fputs(FSP_TPL_HOME, req->out);
 }
 
 /* home route controller */

@@ -42,7 +42,7 @@ struct fsp_qry_item {
   /* query field type */
   enum fsp_qry_type type;
   /* query value */
-  union {
+  union value {
     /* FSP_QRY_STR (utf-8 encoded) */
     char *str_val;
     /* FSP_QRY_MAP */

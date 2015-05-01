@@ -16,8 +16,6 @@ struct fsp_pool {
   /* pointer to the next available offset
      in the memory-pointer */
   void *ptr;
-  /* available bytes */
-  size_t avail;
   /* overall allocated bytes */
   size_t size;
 };

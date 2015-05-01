@@ -5,6 +5,7 @@
 
 #include <stddef.h> /* size_t, NULL ... */
 #include <stdlib.h> /* calloc, realloc, free ... */
+#include <string.h> /* memset */
 
 #include "pool.h"
 
@@ -21,7 +22,6 @@ bool fsp_pool_init(struct fsp_pool *pool)
   pool->mem = NULL;
   pool->ptr = NULL;
   pool->size = 0;
-  pool->avail = 0;
   return true;
 }
 
@@ -36,26 +36,22 @@ void *fsp_pool_take(struct fsp_pool *pool,
                     const size_t mem_size)
 {
   assert(pool != NULL);
-  /* note: "<=" because one byte is reserved */
-  if (pool->avail <= mem_size) {
-    /* new size is: size + (additional_required_bytes) + 1 */
-    size_t add_size = mem_size - pool->avail + 1,
-           new_size = pool->size + add_size;
-    /* realloc memory-pool */
-    void *tmp = realloc(pool->mem, new_size);
-    /* handle error */
-    if (!tmp) return NULL;
-    /* update pointers */
-    pool->mem = tmp;
-    pool->ptr = tmp + pool->size + 1;    
-    pool->size = new_size;
-    pool->avail = add_size;
-    /* this is our additional reserved byte :-) */
-    *(uint8_t *)(pool->ptr - 1) = 0;
-  }
+  /* new size is: size + (additional_required_bytes) + 1 */
+  size_t new_size = pool->size + mem_size + 1;
+  /* realloc memory-pool */
+  void *tmp = realloc(pool->mem, new_size);
+  /* handle error */
+  if (!tmp) return NULL;
+  /* update pointers */
+  pool->mem = tmp;
+  pool->ptr = tmp + pool->size + 1;    
+  pool->size = new_size;
+  /* this is our additional reserved byte :-) */
+  *(uint8_t *)(pool->ptr - 1) = 0;
   /* use offset pointer */
   void *mem_ptr = pool->ptr;
   pool->ptr += mem_size;
+  memset(mem_ptr, 0, mem_size);
   return mem_ptr;
 }
 
