@@ -9,7 +9,7 @@ CFLAGS=-Wall -Werror -Wextra -Winline --std=c11 -D_GNU_SOURCE -I/usr/include/mys
 LDFLAGS=-lm -lpthread -lfcgi -lmysqlclient
 
 APP=fastpoll
-CWD=$(shell readlink -f .)
+CWD=$(shell pwd)
 OUT=$(CWD)/bin/$(APP)
 PID=$(CWD)/run/$(APP).pid
 SOCK=$(CWD)/run/$(APP).sock
@@ -22,15 +22,14 @@ TPL_OUT=src/template_def
 
 .PHONY: clean tpl start stop
 
-#all: tpl app
-all: app
+all: tpl app
 
 app: $(OBJ)
 	$(CC) -o $(OUT) $(OBJ) $(LDFLAGS)
 
 tpl:
-	$(TPL_GEN) -l fsp.h fcgi_stdio.h -c -p fsp_ -u constant -i $(TPL_IN) -o $(TPL_OUT)
-
+	bin/tplgen.php
+	
 %.o: %.c
 	$(CC) $(CFLAGS) -c $^ -o $@
 
@@ -40,8 +39,10 @@ clean:
 # ---------
 # debugging
  
+refresh: stop clean all start 
+
 start:
-	$(SPWNCGI) -s $(SOCK) -f $(OUT) -P $(PID)
+	$(SPWNCGI) -s $(SOCK) -P $(PID) -- $(OUT) $(SOCK)
  
 stop:
 	$(KILL) -9 $(shell cat $(PID))

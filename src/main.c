@@ -16,15 +16,12 @@
 /* number of threads */
 #define THREAD_COUNT 20
 
-/* unix socket-path */
-#define SOCKET_PATH "./run/fastpoll.sock"
-
 /* socket fd */
 static int sock_id;
 static mtx_t mtx;
 
 /**
- * pthread callback
+ * thread callback
  * 
  * @param  a  global application context
  * @return    nothing at all
@@ -58,8 +55,6 @@ static void serve(void *a)
     fsp_app_process(app, &req);        
     fcgx_req_finish(&req);
   }
-  
-  mtx_destroy(&mtx);
 }
 
 /**
@@ -67,7 +62,7 @@ static void serve(void *a)
  * 
  * @param app   global application context
  */
-static void listen(struct fsp_app *app)
+static void listen(struct fsp_app *app, const char *sock)
 {
   thrd_t id[THREAD_COUNT]; 
 
@@ -76,7 +71,7 @@ static void listen(struct fsp_app *app)
   
   /* open unix socket */
   umask(0);  
-  sock_id = fcgx_open_socket(SOCKET_PATH, 2000);
+  sock_id = fcgx_open_socket(sock, 2000);
   
   /* spawn threads */
   for (long i = 1; i < THREAD_COUNT; ++i)
@@ -95,10 +90,15 @@ static void listen(struct fsp_app *app)
  * 
  * @return  exit code
  */
-int main(void)
+int main(int argc, char **argv)
 {
   /* global app context */
   struct fsp_app app;
+  
+  if (argc != 2 || !argv[1]) {
+    fputs("missing socket-path", stderr);
+    return 1;
+  }
   
   if (!fsp_app_init(&app))
     return 1;
@@ -106,9 +106,10 @@ int main(void)
   mtx_init(&mtx, 0);
   
   /* fcgi handler */
-  listen(&app);
+  listen(&app, argv[1]);
   
   /* shutdown */
+  mtx_destroy(&mtx);
   fsp_app_destroy(&app);
   return 0;
 }

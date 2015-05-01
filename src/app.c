@@ -7,26 +7,37 @@
 
 #include "app.h"
 #include "fcgx.h"
-
-/* predefined application routes */
-static const 
-  struct {
-    /* path (without query-string) */
-    char *name;
-    /* path length */
-    size_t nlen;
-    /* controller function */
-    void(*func)(struct fsp_app*, struct fcgx_req*);
-  }
-           
-  routes[] = {
-    { "/",     1, fsp_app_rt_home },
-    { "/vote", 5, fsp_app_rt_vote },
-    { "/poll", 5, fsp_app_rt_poll },
-    /* end */
-    { 0, 0, 0 }
-  };
+#include "tpl.h"
+#include "qry.h"
  
+/* controller function type */
+typedef void(*fsp_rt_t)(struct fsp_app*, struct fcgx_req*);
+
+/* controller functions */
+static void rt_home(struct fsp_app*, struct fcgx_req*);
+static void rt_vote(struct fsp_app*, struct fcgx_req*);
+static void rt_poll(struct fsp_app*, struct fcgx_req*);
+
+/* routes */
+static const struct {
+  /* path (without query-string) */
+  char *name;
+  /* path length */
+  size_t nlen;
+  /* controller function */
+  fsp_rt_t func;
+}
+             
+routes[] = {
+  { "/",     1, rt_home },
+  { "/vote", 5, rt_vote },
+  { "/poll", 5, rt_poll },
+  /* end */
+  { 0, 0, 0 }
+};
+
+/* ------------------------------------ */
+
 /**
  * global initializer
  * 
@@ -85,67 +96,10 @@ void fsp_app_process(struct fsp_app *app,
   }
   
   /* no route found -> error 404 */
-  fsp_app_rt_e404(app, req);
-}
-
-/**
- * home route 
- * 
- * @param app  application context
- * @param req  request context
- */
-void fsp_app_rt_home(struct fsp_app *app FSP_UNUSED, 
-                     struct fcgx_req *req)
-{
-  fcgx_fputs("Status: 200\r\n", req->out);
-  fcgx_fputs("Content-Type: text/plain; Charset=UTF-8\r\n", req->out);
-  fcgx_fputs("\r\n", req->out);
-  fcgx_fputs("home", req->out);  
-}
-
-/**
- * vote route 
- * 
- * @param app  application context
- * @param req  request context
- */
-void fsp_app_rt_vote(struct fsp_app *app FSP_UNUSED, 
-                     struct fcgx_req *req)
-{
-  fcgx_fputs("Status: 200\r\n", req->out);
-  fcgx_fputs("Content-Type: text/plain; Charset=UTF-8\r\n", req->out);
-  fcgx_fputs("\r\n", req->out);
-  fcgx_fputs("vote", req->out);  
-}
-
-/**
- * poll route 
- * 
- * @param app  application context
- * @param req  request context
- */
-void fsp_app_rt_poll(struct fsp_app *app FSP_UNUSED, 
-                     struct fcgx_req *req)
-{
-  fcgx_fputs("Status: 200\r\n", req->out);
-  fcgx_fputs("Content-Type: text/plain; Charset=UTF-8\r\n", req->out);
-  fcgx_fputs("\r\n", req->out);
-  fcgx_fputs("poll", req->out);  
-}
-
-/**
- * error route 
- * 
- * @param app  application context
- * @param req  request context
- */
-void fsp_app_rt_e404(struct fsp_app *app FSP_UNUSED, 
-                     struct fcgx_req *req)
-{
   fcgx_fputs("Status: 404\r\n", req->out);
   fcgx_fputs("Content-Type: text/plain; Charset=UTF-8\r\n", req->out);
   fcgx_fputs("\r\n", req->out);
-  fcgx_fputs("404", req->out);  
+  fcgx_fputs("404 - Not found", req->out);
 }
 
 /**
@@ -153,8 +107,51 @@ void fsp_app_rt_e404(struct fsp_app *app FSP_UNUSED,
  * 
  * @param    app-context
  */
-void fsp_app_destroy(struct fsp_app *app FSP_UNUSED)
+void fsp_app_destroy(struct fsp_app *app)
 {
   fsp_db_destroy(&app->db);
   //fsp_mem_destroy(&app->mem);
+}
+
+/* ------------------------------------ */
+
+/* home route controller */
+static void rt_home(struct fsp_app *app FSP_UNUSED, 
+                    struct fcgx_req *req)
+{
+  /* not much to do here */
+  fcgx_fputs("Status: 200\r\n", req->out);
+  fcgx_fputs("Content-Type: text/html; Charset=UTF-8\r\n", req->out);
+  fcgx_fputs("\r\n", req->out);
+  fcgx_fputs(FSP_TPL_HOME, req->out);
+}
+
+/* home route controller */
+static void rt_vote(struct fsp_app *app FSP_UNUSED, 
+                    struct fcgx_req *req)
+{
+  /* not much to do here */
+  fcgx_fputs("Status: 200\r\n", req->out);
+  fcgx_fputs("Content-Type: text/html; Charset=UTF-8\r\n", req->out);
+  fcgx_fputs("\r\n", req->out);
+  fcgx_fputs(FSP_TPL_HOME, req->out);
+}
+
+/* home route controller */
+static void rt_poll(struct fsp_app *app FSP_UNUSED, 
+                    struct fcgx_req *req)
+{
+  char *req_mth = fcgx_req_param(req, "REQUEST_METHOD");
+  
+  fcgx_fputs("Status: 200\r\n", req->out);
+  fcgx_fputs("Content-Type: text/html; Charset=UTF-8\r\n", req->out);
+  fcgx_fputs("\r\n", req->out);
+  
+  if (strncmp(req_mth, "POST", 4) == 0) {
+    /* new poll */
+    fcgx_fputs("new poll", req->out);
+  } else {
+    /* view poll */
+    fcgx_fputs("view poll", req->out);
+  }
 }

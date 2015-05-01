@@ -26,3 +26,12 @@
 
 /* lazy macro, allow unused vars */ 
 #define FSP_UNUSED __attribute__((unused))
+
+#if FSP_DEBUG == 0 && !defined(NDEBUG)
+ #define NDEBUG
+#elif defined(NDEBUG)
+ #undef NDEBUG
+#endif
+ 
+#include <assert.h> /* assert, static_assert */
+ 
