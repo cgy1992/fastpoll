@@ -11,8 +11,6 @@
 #include "qry.h"
 
 #define ITEM_SIZE sizeof (struct fsp_qry_item)
-
-/* sublime bug */
  ;
 
 #define DBG(m) printf("%s %s(...): %s\n", __FILE__, __func__, m)
@@ -28,31 +26,26 @@ static bool looks_numeric(const char *str,
                           const size_t len)
 {
   bool neg = str[0] == '-';
+  const size_t max_len = 10u + neg;
   /* basic check, more than 10 (or 11) 
      digits is too much for a 32bit number */
-  if (len > (10u + neg))
+  if (len > max_len)
     return false;
   const char *end = str + len - 1,
              *ptr = str + neg;
-  for (; ptr < end; ++str)
+  for (; ptr < end; ++ptr)
     if (*ptr < '0' || *ptr > '9')
       return false;
-  /* overflow check */
-  if (len == (10u + neg)) {
+  if (len == max_len) {
     static const char 
       max_int[] = "2147483647",
       min_int[] = "2147483648";
-    /* pointer to the correct value */
     const char *cmp = neg ? min_int : max_int;
-    /* check digit for digit */
-    for (size_t i = neg, e = 10u + neg; i < e; ++i) 
+    for (size_t i = neg; i < max_len; ++i) 
       if (str[i] < cmp[i])
-        /* at least one digit is lower than the max-value */
         return true;
-    /* last check */
     return 0 == strncmp(cmp, str + neg, 10);    
   }
-  /* looks good */
   return true;
 }
 
@@ -71,21 +64,35 @@ static inline bool set_name(struct fsp_qry *qry,
                             const size_t len)
 {
   if (!(item->name = fsp_pool_take(&(qry->pool), len + 1)))
-    /* very unlikely */
     return false;
-  /* strncpy sets the null-byte */
   strncpy(item->name, str, len);
+  item->name_len = len;
   return true;
+}
+
+/**
+ * compare an item-name
+ *
+ * @param  item     the item
+ * @param  name     
+ * @param  name_len 
+ * @return          true on a match, false otherwise
+ */
+static inline bool cmp_name(const struct fsp_qry_item *item,
+                            const char *name,
+                            const size_t name_len)
+{
+  return item->name_len == name_len &&
+    0 == strncmp(item->name, name, name_len);
 }
 
 /**
  * parses a single item
  *
  * @param  fsp_qry      context
- * @param  fsp_qry_item pointer to a item
- * @return              NULL on failure
+ * @return              true on success, false on failure
  */
-static struct fsp_qry_item *parse_item(struct fsp_qry*);
+static bool parse_item(struct fsp_qry*);
 
 /**
  * parses item offsets and returns a (sub-)item accordingly
@@ -115,10 +122,8 @@ static bool parse_item_value(struct fsp_qry*, struct fsp_qry_item*);
 static struct fsp_qry_item *create_item(struct fsp_qry *qry)
 {
   struct fsp_qry_item *item;
-  /* allocate */
   if (!(item = fsp_pool_take(&(qry->pool), ITEM_SIZE)))
     return NULL;
-  /* set defaults */
   item->name = NULL;
   item->type = FSP_QRY_UNK;
   item->index_max = 0;
@@ -136,10 +141,8 @@ static struct fsp_qry_item *create_item(struct fsp_qry *qry)
 bool fsp_qry_init(struct fsp_qry *qry)
 {
   assert(qry != NULL);
-  /* initialize memory pool */
   if (!fsp_pool_init(&(qry->pool)))
     return false;
-  /* set defaults */
   qry->raw = NULL;
   qry->ptr = NULL;
   qry->list = NULL;
@@ -157,26 +160,15 @@ bool fsp_qry_parse(struct fsp_qry *qry, const char *inp)
 {
   assert(qry != NULL);
   if (*inp == 0)
-    /* nothing to do! */
     return true;
-  /* assign values */
   qry->raw = inp;
   qry->ptr = qry->raw;
-  /* parse first item */
-  qry->list = parse_item(qry);
-  if (!qry->list) return false;
-  /* parse rest */
-  struct fsp_qry_item *curr = qry->list,
-                      *prev = NULL;
-  while (*(qry->ptr) == '&') {
-    ++(qry->ptr); /* skip '&' */
-    curr->prev = prev;
-    curr->next = parse_item(qry);
-    if (!(curr->next)) return false;
-    prev = curr;
-    curr = curr->next;
+  while (parse_item(qry)) {
+    if (*(qry->ptr) != '&')
+      break;
+    if (!*(++(qry->ptr)))
+      break;
   }
-  /* top of the list */
   return true;
 }
 
@@ -197,56 +189,69 @@ void fsp_qry_destroy(struct fsp_qry *qry)
  * @param  fsp_qry      context
  * @return              true on success, false on error
  */
-static struct fsp_qry_item *parse_item(struct fsp_qry *qry)
+static bool parse_item(struct fsp_qry *qry)
 {
-  struct fsp_qry_item *base = NULL, /* base item (gets returned) */
+  struct fsp_qry_item *base = NULL, /* base item */
                       *item = NULL; /* computed item */
-  /* look for the next name */
+  
   const char *pos = qry->ptr;
-  for (; qry->ptr != 0; ++(qry->ptr))
+  
+  for (; *(qry->ptr) != 0; ++(qry->ptr))
     if (*(qry->ptr) == '[' ||
         *(qry->ptr) == '&' ||
         *(qry->ptr) == '=')
       break;
-  /* check name length */
+      
   size_t name_len = qry->ptr - pos;
   if (name_len == 0)
-    /* error or end of input*/
-    return NULL;
-  /* check if the given name is already assigned */
+    return false;
+  
   struct fsp_qry_item *curr;
   for (curr = qry->list; 
        curr != NULL; 
        curr = curr->next) 
-    if (0 == strncmp(curr->name, pos, name_len)) {
-      /* override this item */
+    if (cmp_name(curr, pos, name_len)) {
       base = curr;
       break;
     }
-  /* assign new item if necessary */
+    
   if (base == NULL) {
     if (!(base = create_item(qry)))
-      return NULL;
+      return false;
+    
     if (!set_name(qry, base, pos, name_len))
-      return NULL;
+      return false;
+    
+    if (!qry->list)
+      qry->list = base;
+    else {
+      base->next = qry->list;
+      base->next->prev = base;
+      qry->list = base;
+    }
   }
-  /* set item */
+  
   item = base;
-  /* parse offsets (if any) */
+  
   if (*(qry->ptr) == '[' &&
       !(item = parse_item_offsets(qry, base)))
-    /* error while parsing */
-    return NULL;
-  /* parse value (if any) */
+    return false;
+    
   if (*(qry->ptr) == '=' && 
       !parse_item_value(qry, item))
-    return NULL;
-  /* otherwise, we're done here */
-  printf("base: %p (%s), prev: %p, next: %p\n", 
-    base, base->name, base->prev, base->next);
-  printf("item: %p (%s), prev: %p, next: %p\n", 
-    item, item->name, item->prev, item->next);
-  return base;
+    return false;
+  
+  return true;
+}
+
+#define ADD_TO_LIST(item, list) { \
+  if (list == NULL)               \
+    list = item;                  \
+  else {                          \
+    item->next = list;            \
+    list->prev = item;            \
+    list = item;                  \
+  }                               \
 }
 
 /**
@@ -256,77 +261,76 @@ static struct fsp_qry_item *parse_item(struct fsp_qry *qry)
  * @param  fsp_qry_item base item (without offsets)
  * @return              NULL on failure, an allocated sub-item on success
  */
-static struct fsp_qry_item *parse_item_offsets(struct fsp_qry *qry, 
-                                               struct fsp_qry_item *item)
+static struct fsp_qry_item *
+parse_item_offsets(struct fsp_qry *qry, 
+                   struct fsp_qry_item *item)
 {
   /* tail-call like loop */  
   while (*(qry->ptr) == '[') {
-    /* pointer to the new (or reused) item */
     struct fsp_qry_item *new_item = NULL;
-    /* read offset */
     const char *pos = ++(qry->ptr); /* skip '[' */
+    
     for (; *(qry->ptr) != 0 && *(qry->ptr) != ']'; ++(qry->ptr))
       /* empty loop body*/ ;
+      
     size_t name_len = qry->ptr - pos;
-    /* convert the current item to a map */
     if (item->type != FSP_QRY_MAP)
-      /* ignore previous value, no need to free() anything */
       item->type = FSP_QRY_MAP;
-    /* check if that offset exists in the current item-map */
+    
     if (name_len > 0) {
+      /**
+       * search for an existing item in the bucket 
+       * linked-list or create a new one
+       */
       struct fsp_qry_item *curr;
       for (curr = item->value.map_val; 
            curr != NULL;
            curr = curr->next)
-        if (0 == strncmp(curr->name, pos, name_len)) {
-          /* found an item for this offset */
+        if (cmp_name(curr, pos, name_len)) {
           new_item = curr;
           break;
         }
-      /* no item found -> create a new one */
+        
       if (new_item == NULL) {
         if (!(new_item = create_item(qry)))
-          /* could not create a new item */
           return NULL;
-        /* add it to the end of the list */
-        new_item->next = item->value.map_val;
-        if (item->value.map_val != NULL)
-          item->value.map_val->prev = new_item;
-        item->value.map_val = new_item;
-        /* assign name */
+        
         if (!(set_name(qry, new_item, pos, name_len)))
           return NULL;
-        /* if the name is numeric, adjust index_max too */
+        
+        /* add new-item to bucket linked-list */
+        ADD_TO_LIST(new_item, item->value.map_val);
+        
         if (looks_numeric(new_item->name, name_len)) {
-          /* note: atoi SHOULD be safe now */
           int32_t index_val = atoi(new_item->name);
           if (index_val > item->index_max)
             item->index_max = index_val;
         }
       }
     } else {
-      /* no offset-name, acts as push() */
+      /**
+       * empty offset -> "push" a new item onto the
+       * bucket linked-list
+       */
       if (!(new_item = create_item(qry)))
         return NULL;
-      /* avoid overflow */
+      
       if (!(new_item->name = fsp_pool_take(&(qry->pool), 12)))
         return NULL;
-      /* stringify index and store it as name */
+      
       snprintf(new_item->name, 11, "%d", item->index_max);
-      /* add it to the end of the list */
-      new_item->next = item->value.map_val;
-      if (item->value.map_val != NULL)
-        item->value.map_val->prev = new_item;
-      item->value.map_val = new_item;
-      /* increment index */
+      
+      /* add new-item to bucket linked-list */
+      ADD_TO_LIST(new_item, item->value.map_val);
+      
       if (item->index_max < 0x7fffffff)
         ++item->index_max;
     }
-    /* start all over again */
+    
     item = new_item;
     ++(qry->ptr); /* skip ']' */
   }
-  /* "item" should now point to the correct sub-item */
+  
   return item;
 }
 
@@ -340,15 +344,17 @@ static struct fsp_qry_item *parse_item_offsets(struct fsp_qry *qry,
 static bool parse_item_value(struct fsp_qry *qry, 
                              struct fsp_qry_item *item)
 {
-  /* read offset */
   ++(qry->ptr); /* skip '=' */
   const char *pos = qry->ptr; 
   for (; *(qry->ptr) != 0 && *(qry->ptr) != '&'; ++(qry->ptr))
     /* empty loop body */ ;
+    
   size_t value_len = qry->ptr - pos;
-  char *value_ptr;
+  char *value_ptr = NULL;
+  
   if (!(value_ptr = fsp_pool_take(&(qry->pool), value_len + 1)))
     return false;
+  
   strncpy(value_ptr, pos, value_len);
   item->type = FSP_QRY_STR;
   item->value.str_val = value_ptr;

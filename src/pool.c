@@ -9,6 +9,41 @@
 
 #include "pool.h"
 
+/* initial item size */
+#define ITEM_SIZE 512
+ 
+/* shrink memory usage (slow) */
+#define SHRINK_USAGE 0
+
+/**
+ * creates a bucket
+ *
+ * @return a pool-item or NULL if allocation failed
+ */
+static inline struct fsp_pool_item *create_item()
+{
+  struct fsp_pool_item *item;
+  item = malloc(sizeof (struct fsp_pool_item));
+  
+  /* check if alloc failed */
+  if (!item) return NULL;
+  
+  /* alloc bucket */
+  item->mem = calloc(1, ITEM_SIZE);
+  
+  /* check if alloc failed */
+  if (!item->mem) {
+    /* free bucket itself */
+    free(item);
+    return NULL;
+  }
+  
+  item->ptr = item->mem;
+  item->next = NULL;
+  item->avail = ITEM_SIZE;
+  return item;
+}
+
 /**
  * initialize a memory pool
  *
@@ -19,9 +54,11 @@ bool fsp_pool_init(struct fsp_pool *pool)
 {
   assert(pool != NULL);
   /* set defaults */
-  pool->mem = NULL;
-  pool->ptr = NULL;
-  pool->size = 0;
+  pool->head = create_item();
+  if (!pool->head)
+    /* allocation failed */
+    return false;
+  pool->size = ITEM_SIZE;
   return true;
 }
 
@@ -36,21 +73,38 @@ void *fsp_pool_take(struct fsp_pool *pool,
                     const size_t mem_size)
 {
   assert(pool != NULL);
-  /* new size is: size + (additional_required_bytes) + 1 */
-  size_t new_size = pool->size + mem_size + 1;
-  /* realloc memory-pool */
-  void *tmp = realloc(pool->mem, new_size);
-  /* handle error */
-  if (!tmp) return NULL;
-  /* update pointers */
-  pool->mem = tmp;
-  pool->ptr = tmp + pool->size + 1;    
-  pool->size = new_size;
-  /* this is our additional reserved byte :-) */
-  *(uint8_t *)(pool->ptr - 1) = 0;
-  /* use offset pointer */
-  void *mem_ptr = pool->ptr;
-  pool->ptr += mem_size;
+  struct fsp_pool_item *item = NULL;
+  /* check current head */
+  if (pool->head->avail >= mem_size)
+    item = pool->head;
+  
+#if SHRINK_USAGE
+  else {
+    /* check other items */
+    struct fsp_pool_item *curr;
+    for (curr = pool->head->next; 
+         curr != NULL; 
+         curr = curr->next)
+      if (curr->avail >= mem_size) {
+        item = curr;
+        break;
+      }
+  }
+#endif
+  
+  if (item == NULL) {
+    /* alloc new item */
+    item = create_item();
+    if (!item) return NULL;
+    item->next = pool->head;
+    pool->head = item;
+    pool->size += ITEM_SIZE;
+  }
+  
+  /* update memory-pointer */
+  void *mem_ptr = item->ptr;
+  item->ptr += mem_size;
+  item->avail -= mem_size;
   memset(mem_ptr, 0, mem_size);
   return mem_ptr;
 }
@@ -62,6 +116,13 @@ void *fsp_pool_take(struct fsp_pool *pool,
  */
 void fsp_pool_destroy(struct fsp_pool *pool)
 {
-  /* yup, that's it */
-  free(pool->mem);
+  struct fsp_pool_item *item = NULL, 
+                       *next = NULL;
+  for (item = pool->head;
+       item != NULL;) {
+    next = item->next;
+    free(item->mem);
+    free(item);
+    item = next;
+  }
 }

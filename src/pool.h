@@ -7,17 +7,30 @@
 
 #include "fsp.h"
 
+struct fsp_pool_item;
+
 /**
  * simple memory pool
  */
 struct fsp_pool {
-  /* allocated memory */
-  void *mem;
-  /* pointer to the next available offset
-     in the memory-pointer */
-  void *ptr;
+  /* current pool-item */
+  struct fsp_pool_item *head;
   /* overall allocated bytes */
   size_t size;
+};
+
+/**
+ * memry item (bucket)
+ */
+struct fsp_pool_item {
+  /* allocated memory */
+  void *mem;
+  /* pointer to the next free slot */
+  void *ptr;
+  /* available bytes */
+  size_t avail;
+  /* next item */
+  struct fsp_pool_item *next;
 };
 
 /**

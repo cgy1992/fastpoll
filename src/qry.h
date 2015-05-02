@@ -39,6 +39,8 @@ struct fsp_qry {
 struct fsp_qry_item {
   /* query field name (utf-8 encoded) */
   char *name;
+  /* name length */
+  size_t name_len;
   /* query field type */
   enum fsp_qry_type type;
   /* query value */
