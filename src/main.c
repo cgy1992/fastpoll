@@ -86,6 +86,28 @@ static void listen(struct fsp_app *app, const char *sock)
     thrd_join(id[i], NULL);
 }
 
+static void dump_qry_list(struct fsp_qry_item *list)
+{
+  struct fsp_qry_item *item;
+  for (item = list; 
+       item != NULL; 
+       item = item->next) {
+    fputs("name: ", stdout);
+    fputs(item->name, stdout);
+    fputs(", value: ", stdout);
+    
+    if (item->type == FSP_QRY_STR)
+      fputs(item->value.str_val, stdout);
+    else {
+      fputs("{\n", stdout);
+      dump_qry_list(item->value.map_val);
+      fputs("}", stdout);
+    }
+    
+    fputs("\n", stdout);
+  }
+}
+
 /**
  * main
  * 
@@ -93,6 +115,14 @@ static void listen(struct fsp_app *app, const char *sock)
  */
 int main(int argc, char **argv)
 {
+  const char *qs = "foo[]=1&foo[bar]=2&bar=hallo&bar[test]=world";
+  struct fsp_qry qry;
+  fsp_qry_init(&qry);
+  fsp_qry_parse(&qry, qs);
+  dump_qry_list(qry.list);
+  fsp_qry_destroy(&qry);
+  return 0;
+  
   /* global app context */
   struct fsp_app app;
   

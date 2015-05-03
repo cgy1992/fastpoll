@@ -14,10 +14,13 @@
   ;
 
 /* initial item size */
-#define ITEM_SIZE 32
+#define ITEM_SIZE 512
  
 /* shrink memory usage (slow) */
 #define SHRINK_USAGE 0
+
+/* computes a chunk size */
+#define CHUNK_SIZE(x) MAX(ITEM_SIZE, x)
 
 /**
  * creates a bucket
@@ -34,7 +37,10 @@ create_item(const size_t size)
   if (!item) return NULL;
   
   /* alloc bucket */
-  item->mem = calloc(1, MAX(ITEM_SIZE, size));
+  item->mem = calloc(1, size);
+  
+  printf("alloc %zu bytes (addr %p)\n", 
+    size, item->mem);
   
   /* check if alloc failed */
   if (!item->mem) {
@@ -45,7 +51,7 @@ create_item(const size_t size)
   
   item->ptr = item->mem;
   item->next = NULL;
-  item->avail = ITEM_SIZE;
+  item->avail = size;
   return item;
 }
 
@@ -106,11 +112,12 @@ void *fsp_pool_take(struct fsp_pool *pool,
   
   if (item == NULL) {
     /* alloc new item */
-    item = create_item(align);
+    size_t item_size = CHUNK_SIZE(align);
+    item = create_item(item_size);
     if (!item) return NULL;
     item->next = pool->head;
     pool->head = item;
-    pool->size += ITEM_SIZE;
+    pool->size += item_size;
   }
   
   /* update memory-pointer */
@@ -118,6 +125,10 @@ void *fsp_pool_take(struct fsp_pool *pool,
   item->ptr += align;
   item->avail -= align;
   memset(mem_ptr, 0, align);
+  
+  printf("take %zu bytes (addr %p)\n", 
+    align, mem_ptr);
+  
   return mem_ptr;
 }
 
@@ -134,6 +145,9 @@ void fsp_pool_destroy(struct fsp_pool *pool)
   for (item = pool->head;
        item != NULL;) {
     next = item->next;
+  
+    printf("free %p\n", item->mem);
+    
     free(item->mem);
     free(item);
     item = next;
