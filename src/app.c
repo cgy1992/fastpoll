@@ -132,14 +132,15 @@ static void dump_qry_list(struct fsp_qry_item *list,
     fcgx_fputs(", value: ", req->out);
     if (item->type == FSP_QRY_STR)
       fcgx_fputs(item->value.str_val, req->out);
-    else {
+    else if (item->type == FSP_QRY_MAP) {
       fcgx_fputs("{", req->out);
       dump_qry_list(item->value.map_val, req, tab + 1);
       fcgx_fputs("<br>", req->out);
       for (int i = 0; i < tab; ++i)
         fcgx_fputs("&nbsp;&nbsp;", req->out);
       fcgx_fputs("}", req->out);
-    }
+    } else
+      fcgx_fputs("(none)", req->out);
   }
 } 
 
@@ -162,6 +163,7 @@ static void rt_home(struct fsp_app *app FSP_UNUSED,
   else
     fcgx_fputs("could not parse query string", req->out);
   
+  fsp_qry_destroy(&qry);
   //fcgx_fputs(FSP_TPL_HOME, req->out);
 }
 

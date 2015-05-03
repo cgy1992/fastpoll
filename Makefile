@@ -5,7 +5,7 @@ SPWNCGI=`which spawn-fcgi`
 KILL=`which kill`
 SUDO=`which sudo`
 
-CFLAGS= --std=c11 -D_GNU_SOURCE -I/usr/include/mysql -I./inc
+CFLAGS= --std=c11 -D_GNU_SOURCE -I/usr/include/mysql -I./inc -O3
 LDFLAGS=-lm -lpthread -lfcgi -lmysqlclient
 
 APP=fastpoll
@@ -32,6 +32,7 @@ tpl:
 	
 %.o: %.c
 	$(CC) $(CFLAGS) -c $^ -o $@
+	#$(CC) $(CFLAGS) -S $^ -o $@.S -masm=intel
 
 clean:
 	$(RM) -f $(OBJ)

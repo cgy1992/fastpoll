@@ -6,11 +6,15 @@
 #include <stddef.h> /* size_t, NULL ... */
 #include <stdlib.h> /* calloc, realloc, free ... */
 #include <string.h> /* memset */
+#include <stdio.h>
 
 #include "pool.h"
 
+#define MAX(a,b) a > b ? a : b
+  ;
+
 /* initial item size */
-#define ITEM_SIZE 512
+#define ITEM_SIZE 32
  
 /* shrink memory usage (slow) */
 #define SHRINK_USAGE 0
@@ -20,7 +24,8 @@
  *
  * @return a pool-item or NULL if allocation failed
  */
-static inline struct fsp_pool_item *create_item()
+static inline struct fsp_pool_item *
+create_item(const size_t size)
 {
   struct fsp_pool_item *item;
   item = malloc(sizeof (struct fsp_pool_item));
@@ -29,7 +34,7 @@ static inline struct fsp_pool_item *create_item()
   if (!item) return NULL;
   
   /* alloc bucket */
-  item->mem = calloc(1, ITEM_SIZE);
+  item->mem = calloc(1, MAX(ITEM_SIZE, size));
   
   /* check if alloc failed */
   if (!item->mem) {
@@ -54,7 +59,7 @@ bool fsp_pool_init(struct fsp_pool *pool)
 {
   assert(pool != NULL);
   /* set defaults */
-  pool->head = create_item();
+  pool->head = create_item(ITEM_SIZE);
   if (!pool->head)
     /* allocation failed */
     return false;
@@ -73,9 +78,16 @@ void *fsp_pool_take(struct fsp_pool *pool,
                     const size_t mem_size)
 {
   assert(pool != NULL);
+  
+  size_t align = mem_size;
+  
+  /* align to a 8-byte boundary */
+  if (align % 8 != 0)
+    align += 8 - align % 8;
+  
   struct fsp_pool_item *item = NULL;
   /* check current head */
-  if (pool->head->avail >= mem_size)
+  if (pool->head->avail >= align)
     item = pool->head;
   
 #if SHRINK_USAGE
@@ -85,7 +97,7 @@ void *fsp_pool_take(struct fsp_pool *pool,
     for (curr = pool->head->next; 
          curr != NULL; 
          curr = curr->next)
-      if (curr->avail >= mem_size) {
+      if (curr->avail >= align) {
         item = curr;
         break;
       }
@@ -94,7 +106,7 @@ void *fsp_pool_take(struct fsp_pool *pool,
   
   if (item == NULL) {
     /* alloc new item */
-    item = create_item();
+    item = create_item(align);
     if (!item) return NULL;
     item->next = pool->head;
     pool->head = item;
@@ -103,9 +115,9 @@ void *fsp_pool_take(struct fsp_pool *pool,
   
   /* update memory-pointer */
   void *mem_ptr = item->ptr;
-  item->ptr += mem_size;
-  item->avail -= mem_size;
-  memset(mem_ptr, 0, mem_size);
+  item->ptr += align;
+  item->avail -= align;
+  memset(mem_ptr, 0, align);
   return mem_ptr;
 }
 
@@ -118,6 +130,7 @@ void fsp_pool_destroy(struct fsp_pool *pool)
 {
   struct fsp_pool_item *item = NULL, 
                        *next = NULL;
+                       
   for (item = pool->head;
        item != NULL;) {
     next = item->next;

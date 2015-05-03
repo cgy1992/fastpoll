@@ -13,8 +13,6 @@
 #define ITEM_SIZE sizeof (struct fsp_qry_item)
  ;
 
-#define DBG(m) printf("%s %s(...): %s\n", __FILE__, __func__, m)
-
 /**
  * simple routine to check if a string "looks" numeric (signed 32bit)
  *
@@ -25,7 +23,7 @@
 static bool looks_numeric(const char *str, 
                           const size_t len)
 {
-  bool neg = str[0] == '-';
+  const bool neg = str[0] == '-';
   const size_t max_len = 10u + neg;
   /* basic check, more than 10 (or 11) 
      digits is too much for a 32bit number */
@@ -65,6 +63,7 @@ static inline bool set_name(struct fsp_qry *qry,
 {
   if (!(item->name = fsp_pool_take(&(qry->pool), len + 1)))
     return false;
+  
   strncpy(item->name, str, len);
   item->name_len = len;
   return true;
@@ -101,8 +100,8 @@ static bool parse_item(struct fsp_qry*);
  * @param  fsp_qry_item base item (without offsets)
  * @return              NULL on failure, an allocated sub-item on success
  */
-static struct fsp_qry_item *parse_item_offsets(struct fsp_qry*, 
-                                               struct fsp_qry_item*);
+static struct fsp_qry_item *parse_item_offsets(
+  struct fsp_qry*, struct fsp_qry_item*);
 
 /**
  * parses an item value
@@ -111,7 +110,8 @@ static struct fsp_qry_item *parse_item_offsets(struct fsp_qry*,
  * @param  fsp_qry_item the item
  * @return              true on success, false on failure
  */
-static bool parse_item_value(struct fsp_qry*, struct fsp_qry_item*);
+static bool parse_item_value(
+  struct fsp_qry*, struct fsp_qry_item*);
 
 /**
  * creates a item
@@ -124,6 +124,7 @@ static struct fsp_qry_item *create_item(struct fsp_qry *qry)
   struct fsp_qry_item *item;
   if (!(item = fsp_pool_take(&(qry->pool), ITEM_SIZE)))
     return NULL;
+  
   item->name = NULL;
   item->type = FSP_QRY_UNK;
   item->index_max = 0;
@@ -244,6 +245,10 @@ static bool parse_item(struct fsp_qry *qry)
   return true;
 }
 
+/* note: never free() memory inside a pool! */
+#define ERASE_STR(s) memset(s, 0, strlen(s))
+  ;
+
 #define ADD_TO_LIST(item, list) { \
   if (list == NULL)               \
     list = item;                  \
@@ -274,8 +279,14 @@ parse_item_offsets(struct fsp_qry *qry,
       /* empty loop body*/ ;
       
     size_t name_len = qry->ptr - pos;
-    if (item->type != FSP_QRY_MAP)
+    if (item->type != FSP_QRY_MAP) {
+      /* note: previous value gets lost */
       item->type = FSP_QRY_MAP;
+      if (item->value.str_val != NULL) {
+        ERASE_STR(item->value.str_val);
+        item->value.str_val = NULL;
+      }
+    }
     
     if (name_len > 0) {
       /**
@@ -302,6 +313,7 @@ parse_item_offsets(struct fsp_qry *qry,
         ADD_TO_LIST(new_item, item->value.map_val);
         
         if (looks_numeric(new_item->name, name_len)) {
+          /* used for the next push'ed item */
           int32_t index_val = atoi(new_item->name);
           if (index_val > item->index_max)
             item->index_max = index_val;
@@ -318,13 +330,13 @@ parse_item_offsets(struct fsp_qry *qry,
       if (!(new_item->name = fsp_pool_take(&(qry->pool), 12)))
         return NULL;
       
+      if (item->index_max < 0x7fffffff)
+        ++item->index_max;
+      
       snprintf(new_item->name, 11, "%d", item->index_max);
       
       /* add new-item to bucket linked-list */
       ADD_TO_LIST(new_item, item->value.map_val);
-      
-      if (item->index_max < 0x7fffffff)
-        ++item->index_max;
     }
     
     item = new_item;
