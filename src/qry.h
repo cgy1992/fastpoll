@@ -25,7 +25,7 @@ enum fsp_qry_type {
 struct fsp_qry {
   /* memory pool */
   struct fsp_pool pool;
-  /* raw query-string (utf-8 encoded) */
+  /* raw query-string*/
   const char *raw;
   /* offset pointer to *raw */
   const char *ptr;
@@ -37,7 +37,7 @@ struct fsp_qry {
  * query item
  */
 struct fsp_qry_item {
-  /* query field name (utf-8 encoded) */
+  /* query field name */
   char *name;
   /* name length */
   size_t name_len;
@@ -45,7 +45,7 @@ struct fsp_qry_item {
   enum fsp_qry_type type;
   /* query value */
   union value {
-    /* FSP_QRY_STR (utf-8 encoded) */
+    /* FSP_QRY_STR */
     char *str_val;
     /* FSP_QRY_MAP */
     struct fsp_qry_item *map_val;
