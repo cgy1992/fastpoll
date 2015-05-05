@@ -86,12 +86,21 @@ static void listen(struct fsp_app *app, const char *sock)
     thrd_join(id[i], NULL);
 }
 
-static void dump_qry_list(struct fsp_qry_item *list)
+static inline void emit_tabs(int32_t n)
+{ 
+  for (; n > 0; --n) 
+    fputs("  ", stdout); 
+}
+
+static void dump_qry_list(struct fsp_qry_item *list, int32_t tab)
 {
   struct fsp_qry_item *item;
   for (item = list; 
        item != NULL; 
        item = item->next) {
+    
+    emit_tabs(tab);
+  
     fputs("name: ", stdout);
     fputs(item->name, stdout);
     fputs(", value: ", stdout);
@@ -100,7 +109,8 @@ static void dump_qry_list(struct fsp_qry_item *list)
       fputs(item->value.str_val, stdout);
     else {
       fputs("{\n", stdout);
-      dump_qry_list(item->value.map_val);
+      dump_qry_list(item->value.map_val, tab + 1);
+      emit_tabs(tab);
       fputs("}", stdout);
     }
     
@@ -115,11 +125,14 @@ static void dump_qry_list(struct fsp_qry_item *list)
  */
 int main(int argc, char **argv)
 {
-  const char *qs = "foo[]=1&foo[bar]=2&bar=hallo&bar[test]=world";
+  const char *qs =
+    "ht=p3&chd=t:60,40&chs=250x100&chl=Hello|World&"
+    "a[]=b&a[]=&a[]=c";
+  
   struct fsp_qry qry;
   fsp_qry_init(&qry);
   fsp_qry_parse(&qry, qs);
-  dump_qry_list(qry.list);
+  dump_qry_list(qry.list, 0);
   fsp_qry_destroy(&qry);
   return 0;
   

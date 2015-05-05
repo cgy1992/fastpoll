@@ -38,7 +38,7 @@ static bool looks_numeric(const char *str,
   for (; ptr < end; ++ptr)
     if (*ptr < '0' || *ptr > '9')
       return false;
-  
+    
   if (len == max_len) {
     static const char 
       max_int[] = "2147483647",
@@ -49,7 +49,7 @@ static bool looks_numeric(const char *str,
     for (size_t i = neg; i < max_len; ++i) 
       if (str[i] < cmp[i])
         return true;
-    
+  
     return 0 == strncmp(cmp, str + neg, 10);    
   }
   
@@ -160,7 +160,7 @@ static struct fsp_qry_item *create_item(struct fsp_qry *qry)
   
   item->name = NULL;
   item->type = FSP_QRY_UNK;
-  item->index_max = 0;
+  item->index_max = -1; /* next push will be 0 */
   item->next = NULL;
   item->prev = NULL;
   return item;
@@ -232,19 +232,18 @@ void fsp_qry_destroy(struct fsp_qry *qry)
  */
 static bool parse_item(struct fsp_qry *qry)
 {
-  struct fsp_qry_item *base = NULL, /* base item */
-                      *item = NULL; /* computed item */
-  
+  struct fsp_qry_item *item = NULL; /* computed item */
   const char *pos = qry->ptr;
   
-  for (; *(qry->ptr) != 0; ++(qry->ptr))
-    if (*(qry->ptr) == '[' ||
-        *(qry->ptr) == '&' ||
-        *(qry->ptr) == '=')
-      break;
+  for (; *(qry->ptr) != 0 &&
+         *(qry->ptr) != '[' &&
+         *(qry->ptr) != '&' &&
+         *(qry->ptr) != '='; 
+       ++(qry->ptr))
+    /* empty loop body */ ;
       
   size_t name_len = qry->ptr - pos;
-  if (name_len == 0)
+  if (name_len == 0) 
     return false;
   
   struct fsp_qry_item *curr;
@@ -252,35 +251,34 @@ static bool parse_item(struct fsp_qry *qry)
        curr != NULL; 
        curr = curr->next) 
     if (cmp_name(curr, pos, name_len)) {
-      base = curr;
+      item = curr;
       break;
     }
     
-  if (base == NULL) {
-    if (!(base = create_item(qry)))
+  if (item == NULL) {
+    if (!(item = create_item(qry)))
       return false;
     
-    if (!set_name(qry, base, pos, name_len))
+    if (!set_name(qry, item, pos, name_len))
       return false;
     
     if (!qry->list)
-      qry->list = base;
+      qry->list = item;
     else {
-      base->next = qry->list;
-      base->next->prev = base;
-      qry->list = base;
+      item->next = qry->list;
+      item->next->prev = item;
+      qry->list = item;
     }
   }
   
-  item = base;
+  if (*(qry->ptr) == '[') {
+    item = parse_item_offsets(qry, item);
+    /* offset-parsing failed */
+    if (item == NULL) return false;
+  }
   
-  if (*(qry->ptr) == '[' &&
-      !(item = parse_item_offsets(qry, base)))
-    return false;
-    
-  if (*(qry->ptr) == '=' && 
-      !parse_item_value(qry, item))
-    return false;
+  if (*(qry->ptr) == '=')
+    return parse_item_value(qry, item);
   
   return true;
 }
@@ -333,11 +331,10 @@ parse_item_offsets(struct fsp_qry *qry,
     }
     
     if (name_len > 0)
-      /* name offset */
-      item = parse_name_offset(qry, item, 
-                               pos, name_len);
+      /* name offset: foo[bar] */
+      item = parse_name_offset(qry, item, pos, name_len);
     else
-      /* push (foo[]) offset */
+      /* push offset: foo[] */
       item = parse_push_offset(qry, item);
     
     if (item == NULL)
@@ -387,6 +384,7 @@ parse_name_offset(struct fsp_qry *qry,
     if (looks_numeric(name, name_len)) {
       /* note: using item->name here because \0 */
       int32_t index_val = atoi(item->name);
+      
       if (index_val > base->index_max)
         base->index_max = index_val;
     }
@@ -446,8 +444,7 @@ parse_item_value(struct fsp_qry *qry,
   size_t value_len = qry->ptr - pos;
   char *value_ptr = NULL;
   
-  if (!(value_ptr = fsp_pool_take(&(qry->pool), 
-                                  value_len + 1)))
+  if (!(value_ptr = fsp_pool_take(&(qry->pool), value_len + 1)))
     return false;
   
   strncpy(value_ptr, pos, value_len);

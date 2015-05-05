@@ -39,9 +39,6 @@ create_item(const size_t size)
   /* alloc bucket */
   item->mem = calloc(1, size);
   
-  printf("alloc %zu bytes (addr %p)\n", 
-    size, item->mem);
-  
   /* check if alloc failed */
   if (!item->mem) {
     /* free bucket itself */
@@ -126,9 +123,6 @@ void *fsp_pool_take(struct fsp_pool *pool,
   item->avail -= align;
   memset(mem_ptr, 0, align);
   
-  printf("take %zu bytes (addr %p)\n", 
-    align, mem_ptr);
-  
   return mem_ptr;
 }
 
@@ -145,9 +139,6 @@ void fsp_pool_destroy(struct fsp_pool *pool)
   for (item = pool->head;
        item != NULL;) {
     next = item->next;
-  
-    printf("free %p\n", item->mem);
-    
     free(item->mem);
     free(item);
     item = next;
